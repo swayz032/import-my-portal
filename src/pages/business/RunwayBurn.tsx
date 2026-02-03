@@ -202,9 +202,76 @@ export default function RunwayBurn() {
         </TabsContent>
 
         <TabsContent value="planner" className="space-y-6 mt-6">
+          {/* Scenario Presets */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              onClick={() => {
+                setDevSpend(20000);
+                setMarketingSpend(3000);
+                setLegalCpa(2000);
+                setApiCosts(3000);
+                setCustomerCount(40);
+              }}
+              className="p-4 rounded-xl bg-surface-1 border border-border hover:border-success/50 hover:bg-success/5 transition-all group text-left"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 rounded-full bg-success" />
+                <span className="font-semibold">Conservative</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {viewMode === 'operator' 
+                  ? 'Minimal spending, longest runway. Best for uncertain times.'
+                  : 'Min burn rate, max runway. $28k/mo burn target.'}
+              </p>
+            </button>
+
+            <button
+              onClick={() => {
+                setDevSpend(28000);
+                setMarketingSpend(8500);
+                setLegalCpa(3800);
+                setApiCosts(5200);
+                setCustomerCount(50);
+              }}
+              className="p-4 rounded-xl bg-surface-1 border border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all group text-left ring-2 ring-primary/20"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 rounded-full bg-primary" />
+                <span className="font-semibold">Balanced</span>
+                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Current</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {viewMode === 'operator' 
+                  ? 'Moderate growth investment. Good balance of speed and runway.'
+                  : 'Current allocation. ~$45k/mo burn, 18mo runway.'}
+              </p>
+            </button>
+
+            <button
+              onClick={() => {
+                setDevSpend(45000);
+                setMarketingSpend(20000);
+                setLegalCpa(5000);
+                setApiCosts(10000);
+                setCustomerCount(100);
+              }}
+              className="p-4 rounded-xl bg-surface-1 border border-border hover:border-warning/50 hover:bg-warning/5 transition-all group text-left"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 rounded-full bg-warning" />
+                <span className="font-semibold">Aggressive</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {viewMode === 'operator' 
+                  ? 'Fast growth mode. Shorter runway but faster customer acquisition.'
+                  : 'Max growth. ~$80k/mo burn, 10mo runway.'}
+              </p>
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Inputs */}
-            <Panel title={viewMode === 'operator' ? 'Adjust Spending' : 'Scenario Inputs'}>
+            <Panel title={viewMode === 'operator' ? 'Fine-Tune Spending' : 'Scenario Inputs'}>
               <div className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">

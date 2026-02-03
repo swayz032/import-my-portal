@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SystemProvider } from "@/contexts/SystemContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Approvals from "./pages/Approvals";
 import Activity from "./pages/Activity";
@@ -44,7 +45,17 @@ const App = () => (
             <Sonner />
             <Routes>
               <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route
+                path="/home"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Home />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/dashboard"
                 element={

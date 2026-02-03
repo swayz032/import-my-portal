@@ -3,6 +3,8 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useSystem } from '@/contexts/SystemContext';
 import { AlertTriangle } from 'lucide-react';
+import { AvaFloatingButton } from '@/components/ava/AvaFloatingButton';
+import { approvals, incidents } from '@/data/seed';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -22,6 +24,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  // Calculate Ava notifications
+  const pendingApprovals = approvals.filter(a => a.status === 'Pending').length;
+  const openIncidents = incidents.filter(i => i.status === 'Open').length;
+  const avaNotifications = pendingApprovals + openIncidents;
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -48,6 +55,12 @@ export function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Floating Ava Assistant - always available */}
+      <AvaFloatingButton 
+        hasNotifications={avaNotifications > 0}
+        notificationCount={avaNotifications}
+      />
     </div>
   );
 }
