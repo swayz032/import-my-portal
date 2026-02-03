@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useSystem } from '@/contexts/SystemContext';
@@ -8,10 +8,20 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
+const SIDEBAR_COLLAPSED_KEY = 'aspire_sidebar_collapsed';
+
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return stored ? JSON.parse(stored) : false;
+  });
   const { systemState } = useSystem();
+
+  // Sync collapse state with localStorage
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -34,7 +44,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         )}
         
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>
