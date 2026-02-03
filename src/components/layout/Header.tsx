@@ -5,7 +5,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useSystem } from '@/contexts/SystemContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { OperatorEngineerToggle } from '@/components/shared/OperatorEngineerToggle';
-import { ScopeSelector } from '@/components/header/ScopeSelector';
 import { GlobalSearch } from '@/components/header/GlobalSearch';
 import {
   DropdownMenu,
@@ -27,11 +26,10 @@ export function Header({ onMenuClick }: HeaderProps) {
     await signOut();
   };
 
-  // Extract username from email (before @)
   const displayName = user?.email?.split('@')[0] || 'User';
 
   return (
-    <header className="h-14 border-b border-border bg-black flex items-center justify-between px-4">
+    <header className="h-14 border-b border-border bg-background/95 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-40">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -42,41 +40,29 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="h-5 w-5" />
         </Button>
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse-subtle" />
-            <span className="font-semibold text-text-primary">Aspire</span>
-          </div>
-          {/* Suite/Office Selector */}
-          <div className="hidden sm:flex items-center gap-1 text-text-secondary text-sm">
-            <span className="text-border">|</span>
-            <ScopeSelector />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
         {/* Global Search */}
         <GlobalSearch />
-        
+      </div>
+
+      <div className="flex items-center gap-2">
         {/* Operator/Engineer Toggle */}
         <div className="hidden md:block">
           <OperatorEngineerToggle />
         </div>
         
         {systemState.safetyMode && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-warning/10 border border-warning/30">
-            <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />
-            <span className="text-xs font-medium text-warning">Safety Mode Active</span>
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20">
+            <div className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+            <span className="text-xs font-medium text-warning">Safety Mode</span>
           </div>
         )}
         
         {/* LLM Ops Desk Button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
               <Link to="/llm-ops-desk">
-                <Bot className="h-5 w-5 text-primary" />
+                <Bot className="h-4 w-4 text-primary" />
               </Link>
             </Button>
           </TooltipTrigger>
@@ -85,18 +71,20 @@ export function Header({ onMenuClick }: HeaderProps) {
           </TooltipContent>
         </Tooltip>
         
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-text-secondary" />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive" />
+        <Button variant="ghost" size="icon" className="relative h-9 w-9">
+          <Bell className="h-4 w-4 text-muted-foreground" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-destructive" />
         </Button>
+        
+        <div className="w-px h-6 bg-border mx-1" />
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 pl-3 border-l border-border h-auto py-1">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
+            <Button variant="ghost" className="flex items-center gap-2 h-9 px-2 hover:bg-accent">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/20">
+                <User className="h-3.5 w-3.5 text-primary" />
               </div>
-              <span className="hidden sm:block text-sm text-text-primary">{displayName}</span>
+              <span className="hidden sm:block text-sm font-medium text-foreground">{displayName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

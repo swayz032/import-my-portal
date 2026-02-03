@@ -19,16 +19,18 @@ export function Panel({ title, action, children, className, noPadding, collapsib
     <div className={cn('panel', className)}>
       {(title || action) && (
         <div 
-          className={cn('panel-header', collapsible && 'cursor-pointer')}
+          className={cn('panel-header', collapsible && 'cursor-pointer select-none')}
           onClick={collapsible ? () => setExpanded(!expanded) : undefined}
         >
           <div className="flex items-center gap-2">
             {collapsible && (
-              expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              expanded 
+                ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> 
+                : <ChevronDown className="h-4 w-4 text-muted-foreground" />
             )}
             {title && <h3 className="panel-title">{title}</h3>}
           </div>
-          {action}
+          {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
         </div>
       )}
       {expanded && (

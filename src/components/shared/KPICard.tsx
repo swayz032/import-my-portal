@@ -35,13 +35,16 @@ export function KPICard({
   };
 
   return (
-    <div className="kpi-card">
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
+    <div className="kpi-card group">
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
           {title}
         </span>
         {icon && (
-          <div className={cn('p-1.5 rounded-md bg-surface-2', status && statusColors[status])}>
+          <div className={cn(
+            'p-2 rounded-lg bg-surface-2 transition-colors group-hover:bg-surface-3',
+            status && statusColors[status]
+          )}>
             {icon}
           </div>
         )}
@@ -49,8 +52,8 @@ export function KPICard({
       
       <div className="flex items-baseline gap-2">
         <span className={cn(
-          'text-2xl font-semibold text-text-primary',
-          status && statusColors[status]
+          'text-2xl font-semibold tracking-tight',
+          status ? statusColors[status] : 'text-foreground'
         )}>
           {value}
         </span>
@@ -65,19 +68,19 @@ export function KPICard({
               <ArrowDownRight className="h-3 w-3" />
             )}
             {Math.abs(trend.value)}%
-            {trend.label && <span className="ml-1 text-text-tertiary">{trend.label}</span>}
+            {trend.label && <span className="ml-1 text-muted-foreground">{trend.label}</span>}
           </span>
         )}
       </div>
       
       {subtitle && (
-        <p className="text-xs text-text-secondary mt-1">{subtitle}</p>
+        <p className="text-xs text-muted-foreground mt-1.5">{subtitle}</p>
       )}
       
       {linkTo && (
         <Link
           to={linkTo}
-          className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 mt-2 font-medium"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 mt-3 font-medium transition-colors"
         >
           {linkLabel || 'View details'}
           <ArrowUpRight className="h-3 w-3" />
