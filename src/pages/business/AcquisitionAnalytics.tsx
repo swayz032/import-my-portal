@@ -4,6 +4,7 @@ import { KPICard } from '@/components/shared/KPICard';
 import { DataTable } from '@/components/shared/DataTable';
 import { ModeText } from '@/components/shared/ModeText';
 import { ModeDetails } from '@/components/shared/ModeDetails';
+import { ChartWithHeadline } from '@/components/charts/ChartWithHeadline';
 import { useSystem } from '@/contexts/SystemContext';
 import { acquisitionAnalyticsData, ChannelPerformance, AgeRangeData, GenderData } from '@/data/businessSeed';
 import { formatPercent } from '@/lib/formatters';
@@ -179,32 +180,42 @@ export default function AcquisitionAnalytics() {
 
         <TabsContent value="funnel" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Panel title={viewMode === 'operator' ? 'Your Funnel' : 'Conversion Funnel'}>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <FunnelChart>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(220 18% 11%)', 
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '8px',
-                        color: 'rgba(255,255,255,0.92)'
-                      }}
-                    />
-                    <Funnel
-                      data={funnelData}
-                      dataKey="value"
-                      nameKey="name"
-                      isAnimationActive
-                    >
-                      {funnelData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                      <LabelList position="right" fill="rgba(255,255,255,0.8)" fontSize={12} />
-                    </Funnel>
-                  </FunnelChart>
-                </ResponsiveContainer>
-              </div>
+            <Panel>
+              <ChartWithHeadline
+                headline={viewMode === 'operator' 
+                  ? `${((acquisitionAnalyticsData.funnel.paid / acquisitionAnalyticsData.funnel.visits) * 100).toFixed(1)}% of visitors become customers`
+                  : 'Conversion Funnel Performance'}
+                subtext={viewMode === 'operator' 
+                  ? 'This is how people move through your signup flow'
+                  : `${acquisitionAnalyticsData.funnel.visits} visits → ${acquisitionAnalyticsData.funnel.paid} paid`}
+                trend="positive"
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <FunnelChart>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(220 18% 11%)', 
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '8px',
+                          color: 'rgba(255,255,255,0.92)'
+                        }}
+                      />
+                      <Funnel
+                        data={funnelData}
+                        dataKey="value"
+                        nameKey="name"
+                        isAnimationActive
+                      >
+                        {funnelData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                        <LabelList position="right" fill="rgba(255,255,255,0.8)" fontSize={12} />
+                      </Funnel>
+                    </FunnelChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartWithHeadline>
             </Panel>
 
             <Panel title={viewMode === 'operator' ? 'Funnel Numbers' : 'Funnel Metrics'}>
@@ -264,26 +275,36 @@ export default function AcquisitionAnalytics() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Age Range */}
-            <Panel title={viewMode === 'operator' ? 'By Age Group' : 'Age Range Distribution'}>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ageChartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                    <XAxis type="number" stroke="rgba(255,255,255,0.5)" fontSize={12} />
-                    <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={12} width={100} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(220 18% 11%)', 
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '8px',
-                        color: 'rgba(255,255,255,0.92)'
-                      }}
-                    />
-                    <Bar dataKey="signups" fill="hsl(187, 82%, 53%)" name="Signups" />
-                    <Bar dataKey="conversions" fill="hsl(142, 71%, 45%)" name="Conversions" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            <Panel>
+              <ChartWithHeadline
+                headline={viewMode === 'operator' 
+                  ? `${acquisitionAnalyticsData.bestConvertingAgeRange} converts best`
+                  : 'Age Range Distribution'}
+                subtext={viewMode === 'operator' 
+                  ? 'This age group has the highest conversion rate'
+                  : 'Signups and conversions by age range'}
+                trend="positive"
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={ageChartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                      <XAxis type="number" stroke="rgba(255,255,255,0.5)" fontSize={12} />
+                      <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={12} width={100} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(220 18% 11%)', 
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '8px',
+                          color: 'rgba(255,255,255,0.92)'
+                        }}
+                      />
+                      <Bar dataKey="signups" fill="hsl(187, 82%, 53%)" name="Signups" />
+                      <Bar dataKey="conversions" fill="hsl(142, 71%, 45%)" name="Conversions" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartWithHeadline>
               <div className="mt-4 space-y-2">
                 {acquisitionAnalyticsData.demographics.ageRanges.slice(0, 3).map((age) => (
                   <div key={age.range} className="flex justify-between text-sm">
@@ -297,26 +318,36 @@ export default function AcquisitionAnalytics() {
             </Panel>
 
             {/* Gender */}
-            <Panel title={viewMode === 'operator' ? 'By Gender' : 'Gender Distribution'}>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={genderChartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                    <XAxis type="number" stroke="rgba(255,255,255,0.5)" fontSize={12} />
-                    <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={12} width={120} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(220 18% 11%)', 
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '8px',
-                        color: 'rgba(255,255,255,0.92)'
-                      }}
-                    />
-                    <Bar dataKey="signups" fill="hsl(262, 83%, 58%)" name="Signups" />
-                    <Bar dataKey="conversions" fill="hsl(38, 92%, 50%)" name="Conversions" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+            <Panel>
+              <ChartWithHeadline
+                headline={viewMode === 'operator' 
+                  ? `${acquisitionAnalyticsData.bestConvertingGender.charAt(0).toUpperCase() + acquisitionAnalyticsData.bestConvertingGender.slice(1)} users convert best`
+                  : 'Gender Distribution'}
+                subtext={viewMode === 'operator' 
+                  ? 'This gender has the highest conversion rate'
+                  : 'Signups and conversions by gender'}
+                trend="neutral"
+              >
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={genderChartData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                      <XAxis type="number" stroke="rgba(255,255,255,0.5)" fontSize={12} />
+                      <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={12} width={120} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(220 18% 11%)', 
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '8px',
+                          color: 'rgba(255,255,255,0.92)'
+                        }}
+                      />
+                      <Bar dataKey="signups" fill="hsl(262, 83%, 58%)" name="Signups" />
+                      <Bar dataKey="conversions" fill="hsl(38, 92%, 50%)" name="Conversions" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartWithHeadline>
               <div className="mt-4 space-y-2">
                 {acquisitionAnalyticsData.demographics.genders.slice(0, 3).map((gender) => (
                   <div key={gender.gender} className="flex justify-between text-sm">

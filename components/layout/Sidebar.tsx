@@ -34,12 +34,18 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+// Quick access items (most used, shown at top)
+const quickAccessItems = [
+  { to: '/home', icon: LayoutDashboard, label: 'Home' },
   { to: '/approvals', icon: CheckCircle, label: 'Approvals' },
+];
+
+// Operations items
+const operationsItems = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/activity', icon: Activity, label: 'Activity Log' },
-  { to: '/safety', icon: Shield, label: 'Safety Mode' },
   { to: '/incidents', icon: AlertTriangle, label: 'Incidents' },
+  { to: '/safety', icon: Shield, label: 'Safety Mode' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions & Sales' },
   { to: '/connected-apps', icon: Plug, label: 'Connected Apps' },
@@ -64,9 +70,9 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
   const [businessOpen, setBusinessOpen] = useState(location.pathname.startsWith('/business'));
   const [skillPacksOpen, setSkillPacksOpen] = useState(location.pathname.startsWith('/skill-packs'));
 
-  const renderNavItem = (item: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) => {
+  const renderNavItem = (item: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }, showBadge?: boolean, badgeCount?: number) => {
     const isActive = location.pathname === item.to || 
-      (item.to === '/dashboard' && location.pathname === '/');
+      (item.to === '/home' && location.pathname === '/');
     
     const linkContent = (
       <NavLink
@@ -194,7 +200,23 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         </div>
 
         <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-8rem)]">
-          {navItems.map((item) => renderNavItem(item))}
+          {/* Quick Access Section */}
+          {!isCollapsed && (
+            <p className="px-3 pb-2 text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
+              Quick Access
+            </p>
+          )}
+          {quickAccessItems.map((item) => renderNavItem(item))}
+
+          {/* Operations Section */}
+          <div className="pt-4 pb-2">
+            {!isCollapsed && (
+              <p className="px-3 text-xs font-medium text-sidebar-foreground/60 uppercase tracking-wider">
+                Operations
+              </p>
+            )}
+          </div>
+          {operationsItems.map((item) => renderNavItem(item))}
 
           {/* Business Control Group - Only show when viewMode === 'operator' */}
           {viewMode === 'operator' && (
