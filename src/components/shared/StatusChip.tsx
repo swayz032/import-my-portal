@@ -6,6 +6,7 @@ type StatusType =
   | 'critical' 
   | 'pending' 
   | 'neutral'
+  | 'info'
   | 'healthy'
   | 'at-risk'
   | 'writes-paused'
@@ -24,6 +25,7 @@ const statusStyles: Record<StatusType, string> = {
   'at-risk': 'bg-warning/20 text-warning',
   critical: 'bg-destructive/20 text-destructive',
   pending: 'bg-primary/20 text-primary',
+  info: 'bg-primary/20 text-primary',
   'writes-paused': 'bg-warning/20 text-warning',
   'read-only': 'bg-muted text-muted-foreground',
   neutral: 'bg-muted text-muted-foreground',
