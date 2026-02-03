@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { 
   CheckCircle, 
   XCircle, 
@@ -30,6 +31,7 @@ export function ReleaseControl() {
     createdApprovalId,
     createApproval,
     isCreatingApproval,
+    addReceipt,
   } = useOpsDesk();
   const approval = createdApprovalId ? { status: 'approved', decisionReason: 'Auto-approved after tests' } : null;
   const robotRuns = [
@@ -39,13 +41,18 @@ export function ReleaseControl() {
   
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [decisionReason, setDecisionReason] = useState('');
+  const [releaseStateOverride, setReleaseStateOverride] = useState<ReleaseState | null>(null);
+  const [isLaunching, setIsLaunching] = useState(false);
   
   const testsPassed = currentPatchJob?.state === 'tests_passed' || currentPatchJob?.state === 'awaiting_approval';
   const stagingPassed = robotRuns.find(r => r.env === 'staging')?.status === 'passed';
   const canaryPassed = robotRuns.find(r => r.env === 'canary')?.status === 'passed';
   
+  const isSafetyModeOn = systemState.safetyMode;
+  
   // Determine release state
   const getReleaseState = (): ReleaseState => {
+    if (releaseStateOverride) return releaseStateOverride;
     if (approval?.status === 'approved') return 'approved';
     if (testsPassed && stagingPassed && canaryPassed) return 'ready_for_approval';
     return 'not_ready';
@@ -69,7 +76,31 @@ export function ReleaseControl() {
   };
   
   const handleLaunchRelease = async () => {
-    console.log('Launching release...');
+    setIsLaunching(true);
+    setReleaseStateOverride('deploying');
+    
+    // Simulate deployment stages
+    addReceipt({ 
+      action: 'Release launched', 
+      outcome: 'Success', 
+      actor: 'You', 
+      summary: 'Release deployment started',
+      receiptType: 'release_launched'
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Simulate completion
+    setReleaseStateOverride('completed');
+    addReceipt({ 
+      action: 'Release completed', 
+      outcome: 'Success', 
+      actor: 'System', 
+      summary: 'All environments deployed and verified',
+      receiptType: 'release_completed'
+    });
+    
+    setIsLaunching(false);
   };
   
   // Operator-friendly messages
@@ -93,27 +124,28 @@ export function ReleaseControl() {
   };
   
   return (
-    <Panel 
-      title="Release Control" 
-      action={
-        <Badge 
-          variant="outline" 
-          className={cn(
-            'text-xs',
-            releaseState === 'completed' && 'border-success/30 text-success bg-success/10',
-            releaseState === 'rolled_back' && 'border-destructive/30 text-destructive bg-destructive/10',
-            releaseState === 'deploying' && 'border-primary/30 text-primary bg-primary/10',
-            releaseState === 'approved' && 'border-success/30 text-success bg-success/10',
-            releaseState === 'ready_for_approval' && 'border-warning/30 text-warning bg-warning/10',
-            releaseState === 'not_ready' && 'border-border text-text-tertiary'
-          )}
-        >
-          {releaseState === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
-          {releaseState === 'deploying' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-          {releaseState.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-        </Badge>
-      }
-    >
+    <TooltipProvider>
+      <Panel 
+        title="Release Control" 
+        action={
+          <Badge 
+            variant="outline" 
+            className={cn(
+              'text-xs',
+              releaseState === 'completed' && 'border-success/30 text-success bg-success/10',
+              releaseState === 'rolled_back' && 'border-destructive/30 text-destructive bg-destructive/10',
+              releaseState === 'deploying' && 'border-primary/30 text-primary bg-primary/10',
+              releaseState === 'approved' && 'border-success/30 text-success bg-success/10',
+              releaseState === 'ready_for_approval' && 'border-warning/30 text-warning bg-warning/10',
+              releaseState === 'not_ready' && 'border-border text-text-tertiary'
+            )}
+          >
+            {releaseState === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+            {releaseState === 'deploying' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+            {releaseState.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          </Badge>
+        }
+      >
       {/* Safety Mode Warning */}
       {systemState.safetyMode && (
         <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 mb-4 flex items-start gap-2">
@@ -224,20 +256,51 @@ export function ReleaseControl() {
               )}
             </div>
             
-            <Button 
-              onClick={handleLaunchRelease} 
-              disabled={systemState.safetyMode}
-              className="w-full bg-success hover:bg-success/90"
-              size="lg"
-            >
-              <Rocket className="h-4 w-4 mr-2" />
-              Launch Release
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="block">
+                  <Button 
+                    onClick={handleLaunchRelease} 
+                    disabled={isSafetyModeOn || isLaunching}
+                    className="w-full bg-success hover:bg-success/90"
+                    size="lg"
+                  >
+                    {isLaunching ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deploying...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4 mr-2" />
+                        Launch Release
+                      </>
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isSafetyModeOn && (
+                <TooltipContent>
+                  <p>Restricted when Safety Mode is ON</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
             
             <p className="text-xs text-text-tertiary text-center">
               Staging → Canary → Full rollout
             </p>
           </>
+        )}
+        
+        {/* State 4: Deploying */}
+        {releaseState === 'deploying' && (
+          <div className="text-center py-4">
+            <Loader2 className="h-12 w-12 text-primary mx-auto mb-3 animate-spin" />
+            <h3 className="text-lg font-medium text-text-primary">Deploying...</h3>
+            <p className="text-sm text-text-secondary mt-1">
+              Release in progress. Deploying to environments.
+            </p>
+          </div>
         )}
         
         {/* State 5: Completed */}
@@ -311,6 +374,7 @@ export function ReleaseControl() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Panel>
+      </Panel>
+    </TooltipProvider>
   );
 }
