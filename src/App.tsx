@@ -14,6 +14,7 @@ import Customers from "./pages/Customers";
 import Subscriptions from "./pages/Subscriptions";
 import ConnectedApps from "./pages/ConnectedApps";
 import Advanced from "./pages/Advanced";
+import LLMOpsDesk from "./pages/LLMOpsDesk";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/subscriptions" element={<ProtectedRoute><AppLayout><Subscriptions /></AppLayout></ProtectedRoute>} />
               <Route path="/connected-apps" element={<ProtectedRoute><AppLayout><ConnectedApps /></AppLayout></ProtectedRoute>} />
               <Route path="/advanced" element={<ProtectedRoute><AppLayout><Advanced /></AppLayout></ProtectedRoute>} />
+              <Route path="/llm-ops-desk" element={<ProtectedRoute><LLMOpsDesk /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </SystemProvider>
