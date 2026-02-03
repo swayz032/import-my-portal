@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PublicRoute } from "./components/auth/PublicRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import AutomationPage from "./pages/Automation";
 
 // Business Control pages
 import RunwayBurn from "./pages/business/RunwayBurn";
@@ -140,6 +141,16 @@ const App = () => (
                   <ProtectedRoute>
                     <AppLayout>
                       <LLMOpsDesk />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/automation"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <AutomationPage />
                     </AppLayout>
                   </ProtectedRoute>
                 }

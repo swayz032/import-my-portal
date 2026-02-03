@@ -5,6 +5,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useSystem } from '@/contexts/SystemContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { OperatorEngineerToggle } from '@/components/shared/OperatorEngineerToggle';
+import { ScopeSelector } from '@/components/header/ScopeSelector';
+import { GlobalSearch } from '@/components/header/GlobalSearch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,18 +45,20 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse-subtle" />
-            <span className="font-semibold text-text-primary">Zenith Solutions</span>
+            <span className="font-semibold text-text-primary">Aspire</span>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-text-secondary text-sm">
+          {/* Suite/Office Selector */}
+          <div className="hidden sm:flex items-center gap-1 text-text-secondary text-sm">
             <span className="text-border">|</span>
-            <span>Suite 120</span>
-            <span className="text-border">•</span>
-            <span>Office 14</span>
+            <ScopeSelector />
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Global Search */}
+        <GlobalSearch />
+        
         {/* Operator/Engineer Toggle */}
         <div className="hidden md:block">
           <OperatorEngineerToggle />

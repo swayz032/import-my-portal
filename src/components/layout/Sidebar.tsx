@@ -19,6 +19,7 @@ import {
   Package,
   Cpu,
   ChevronDown,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ const navItems = [
   { to: '/activity', icon: Activity, label: 'Activity Log' },
   { to: '/safety', icon: Shield, label: 'Safety Mode' },
   { to: '/incidents', icon: AlertTriangle, label: 'Incidents' },
+  { to: '/automation', icon: Zap, label: 'Automation' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions & Sales' },
   { to: '/connected-apps', icon: Plug, label: 'Connected Apps' },

@@ -25,6 +25,12 @@ export interface Incident {
   subscribed: boolean;
   timelineReceiptIds: string[];
   notes: IncidentNote[];
+  // Trust Spine fields
+  detectionSource: 'robot_test' | 'provider' | 'rule' | 'user_report';
+  customerNotified: 'yes' | 'no' | 'queued';
+  proofStatus: 'ok' | 'missing' | 'pending';
+  recommendedAction?: string;
+  correlationId?: string;
 }
 
 export interface IncidentNote {
@@ -151,6 +157,11 @@ export const incidents: Incident[] = [
     updatedAt: '2026-01-08T10:45:00Z',
     subscribed: true,
     timelineReceiptIds: ['RCP-101', 'RCP-102'],
+    detectionSource: 'provider',
+    customerNotified: 'queued',
+    proofStatus: 'ok',
+    recommendedAction: 'Re-authenticate the Stripe integration',
+    correlationId: 'corr-stripe-001',
     notes: [
       {
         author: 'System',
@@ -176,6 +187,11 @@ export const incidents: Incident[] = [
     updatedAt: '2026-01-08T09:15:00Z',
     subscribed: false,
     timelineReceiptIds: ['RCP-105'],
+    detectionSource: 'robot_test',
+    customerNotified: 'no',
+    proofStatus: 'pending',
+    recommendedAction: 'Monitor HubSpot status page and wait for recovery',
+    correlationId: 'corr-webhook-001',
     notes: [
       {
         author: 'System',
@@ -195,6 +211,11 @@ export const incidents: Incident[] = [
     updatedAt: '2026-01-07T15:30:00Z',
     subscribed: false,
     timelineReceiptIds: ['RCP-106', 'RCP-107'],
+    detectionSource: 'rule',
+    customerNotified: 'yes',
+    proofStatus: 'ok',
+    recommendedAction: 'No action needed - resolved',
+    correlationId: 'corr-sync-001',
     notes: [
       {
         author: 'System',
