@@ -13,8 +13,8 @@ import {
   Hand,
   Zap,
   CheckCircle,
-  Loader2,
 } from 'lucide-react';
+import avaOrbVideo from '@/assets/ava-orb-video.mp4';
 import { cn } from '@/lib/utils';
 
 const automationModeLabels: Record<AutomationMode, { label: string; icon: React.ReactNode; description: string }> = {
@@ -210,26 +210,21 @@ export function AvaHero() {
       
       {/* Center Body - Orb */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        {/* Large Orb - Using CSS gradient animation instead of video */}
+        {/* Large Orb - Video */}
         <div 
           className={cn(
             'relative w-72 h-72 md:w-80 md:h-80 rounded-full overflow-hidden transition-all duration-500',
             isAnimating && 'shadow-2xl shadow-primary/30'
           )}
         >
-          {/* Animated gradient orb */}
-          <div className={cn(
-            'absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/50 to-primary/20',
-            isAnimating && 'animate-pulse'
-          )}>
-            <div className="absolute inset-4 rounded-full bg-gradient-to-tl from-primary/80 via-primary/40 to-transparent opacity-80" />
-            <div className="absolute inset-8 rounded-full bg-gradient-to-br from-white/10 via-primary/30 to-transparent" />
-            {isAnimating && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="h-16 w-16 text-white/80 animate-spin" />
-              </div>
-            )}
-          </div>
+          <video
+            src={avaOrbVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           
           {/* Pulse ring for active states */}
           {isAnimating && (
