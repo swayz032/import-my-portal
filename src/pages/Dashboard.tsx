@@ -9,6 +9,7 @@ import { SeverityBadge } from '@/components/shared/SeverityBadge';
 import { RiskBadge } from '@/components/shared/RiskBadge';
 import { ModeText } from '@/components/shared/ModeText';
 import { ModeDetails } from '@/components/shared/ModeDetails';
+import { ExplainTooltip, explainContent } from '@/components/shared/ExplainTooltip';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +26,7 @@ import {
   Incident,
   Receipt,
 } from '@/data/seed';
+import { trustSpineMetrics } from '@/data/automationSeed';
 import { formatDate, formatCurrency, formatTimeAgo, formatLatency, formatPercent, formatNumber } from '@/lib/formatters';
 import {
   CheckCircle,
@@ -44,6 +46,9 @@ import {
   Check,
   X,
   Sparkles,
+  FileText,
+  Clock,
+  Inbox,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -335,6 +340,84 @@ export default function Dashboard() {
               </Link>
             </div>
           </Panel>
+
+          {/* Trust Spine Health Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-text-primary">
+                <ModeText operator="System Health" engineer="Trust Spine Health" />
+              </h3>
+              <ExplainTooltip content={explainContent.receiptCoverage} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="relative">
+                <KPICard
+                  title={viewMode === 'operator' ? 'Proof coverage' : 'Receipt coverage %'}
+                  value={`${trustSpineMetrics.receiptCoverage['24h']}%`}
+                  subtitle={`7d: ${trustSpineMetrics.receiptCoverage['7d']}%`}
+                  icon={<FileText className="h-4 w-4" />}
+                  status={trustSpineMetrics.receiptCoverage['24h'] >= 95 ? 'success' : 'warning'}
+                  linkTo="/llm-ops-desk"
+                  linkLabel={viewMode === 'operator' ? 'View receipts' : 'Receipts tab'}
+                />
+              </div>
+              <div className="relative">
+                <KPICard
+                  title={viewMode === 'operator' ? 'Missing proof' : 'Missing receipts'}
+                  value={trustSpineMetrics.missingReceipts.count}
+                  subtitle={trustSpineMetrics.missingReceipts.severity}
+                  icon={<AlertCircle className="h-4 w-4" />}
+                  status={trustSpineMetrics.missingReceipts.count > 5 ? 'warning' : 'success'}
+                  linkTo="/incidents?proofStatus=missing"
+                  linkLabel="Investigate"
+                />
+              </div>
+              <div className="relative">
+                <KPICard
+                  title={viewMode === 'operator' ? 'Awaiting decisions' : 'Approvals pending'}
+                  value={trustSpineMetrics.approvalsPending.count}
+                  subtitle={`Oldest: ${trustSpineMetrics.approvalsPending.oldestAge}`}
+                  icon={<Clock className="h-4 w-4" />}
+                  status={trustSpineMetrics.approvalsPending.count > 5 ? 'warning' : 'info'}
+                  linkTo="/approvals"
+                  linkLabel="Review"
+                />
+              </div>
+              <div className="relative">
+                <KPICard
+                  title={viewMode === 'operator' ? 'Blocked by rules' : 'Policy blocks (24h)'}
+                  value={trustSpineMetrics.policyBlocks['24h']}
+                  icon={<Shield className="h-4 w-4" />}
+                  status={trustSpineMetrics.policyBlocks['24h'] > 20 ? 'warning' : 'info'}
+                  linkTo="/safety"
+                  linkLabel={viewMode === 'operator' ? 'View blocks' : 'Safety filters'}
+                />
+              </div>
+              <div className="relative">
+                <KPICard
+                  title={viewMode === 'operator' ? 'Service errors' : 'Provider errors (24h)'}
+                  value={trustSpineMetrics.providerErrors['24h']}
+                  subtitle={viewMode === 'engineer' ? `p95: ${trustSpineMetrics.providerErrors.p95Latency}ms` : undefined}
+                  icon={<Server className="h-4 w-4" />}
+                  status={trustSpineMetrics.providerErrors['24h'] > 10 ? 'critical' : 'info'}
+                  linkTo="/llm-ops-desk?providerId=stripe"
+                  linkLabel="Provider log"
+                />
+              </div>
+              <div className="relative">
+                <KPICard
+                  title={viewMode === 'operator' ? 'Work queue' : 'Outbox health'}
+                  value={`${trustSpineMetrics.outboxHealth.depth} jobs`}
+                  subtitle={`Lag: ${trustSpineMetrics.outboxHealth.lag}`}
+                  icon={<Inbox className="h-4 w-4" />}
+                  status={trustSpineMetrics.outboxHealth.depth > 20 ? 'warning' : 'success'}
+                  linkTo="/automation"
+                  linkLabel="Queue"
+                />
+              </div>
+            </div>
+          </div>
+
 
 
           {/* Main Panels */}

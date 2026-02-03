@@ -69,7 +69,37 @@ export default function Incidents() {
     },
     { key: 'summary', header: 'What happened', className: 'max-w-xs' },
     { key: 'customer', header: "Who's affected" },
-    { key: 'updatedAt', header: 'Last update', render: (i: Incident) => <span className="text-text-secondary">{formatTimeAgo(i.updatedAt)}</span> },
+    { 
+      key: 'detectionSource', 
+      header: 'How detected', 
+      render: (i: Incident) => {
+        const sourceLabels = {
+          robot_test: 'Automated test',
+          provider: 'Service alert',
+          rule: 'Safety rule',
+          user_report: 'User reported',
+        };
+        return <span className="text-text-secondary text-xs">{sourceLabels[i.detectionSource]}</span>;
+      }
+    },
+    { 
+      key: 'customerNotified', 
+      header: 'Customer notified', 
+      render: (i: Incident) => {
+        const status = i.customerNotified === 'yes' ? 'success' : i.customerNotified === 'queued' ? 'pending' : 'warning';
+        const label = i.customerNotified === 'yes' ? 'Yes' : i.customerNotified === 'queued' ? 'Queued' : 'No';
+        return <StatusChip status={status} label={label} />;
+      }
+    },
+    { 
+      key: 'proofStatus', 
+      header: 'Proof', 
+      render: (i: Incident) => {
+        const status = i.proofStatus === 'ok' ? 'success' : i.proofStatus === 'missing' ? 'critical' : 'pending';
+        const label = i.proofStatus === 'ok' ? 'Recorded' : i.proofStatus === 'missing' ? 'Missing' : 'Pending';
+        return <StatusChip status={status} label={label} />;
+      }
+    },
     {
       key: 'analyze',
       header: '',
@@ -98,6 +128,26 @@ export default function Incidents() {
     { key: 'summary', header: 'Summary', className: 'max-w-xs truncate' },
     { key: 'customer', header: 'Customer' },
     { key: 'provider', header: 'Provider' },
+    { 
+      key: 'detectionSource', 
+      header: 'Source', 
+      render: (i: Incident) => <span className="font-mono text-xs">{i.detectionSource}</span>
+    },
+    { 
+      key: 'customerNotified', 
+      header: 'Notified', 
+      render: (i: Incident) => <StatusChip status={i.customerNotified === 'yes' ? 'success' : 'warning'} label={i.customerNotified} />
+    },
+    { 
+      key: 'proofStatus', 
+      header: 'Proof', 
+      render: (i: Incident) => <StatusChip status={i.proofStatus === 'ok' ? 'success' : i.proofStatus === 'missing' ? 'critical' : 'pending'} label={i.proofStatus} />
+    },
+    { 
+      key: 'correlationId', 
+      header: 'Correlation', 
+      render: (i: Incident) => <span className="font-mono text-xs truncate max-w-[80px]">{i.correlationId || '—'}</span>
+    },
     { key: 'updatedAt', header: 'Updated', render: (i: Incident) => <span className="text-text-secondary">{formatTimeAgo(i.updatedAt)}</span> },
     {
       key: 'analyze',
@@ -212,13 +262,36 @@ export default function Incidents() {
                         <p className="text-sm">{selectedIncident.customer}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-surface-1 border border-border">
-                        <p className="text-xs text-text-tertiary mb-1">Next step</p>
+                        <p className="text-xs text-text-tertiary mb-1">How we detected it</p>
                         <p className="text-sm">
-                          {selectedIncident.status === 'Open' 
-                            ? 'Review the issue and decide on a fix'
-                            : 'Monitor to ensure it stays resolved'}
+                          {selectedIncident.detectionSource === 'robot_test' && 'Automated test'}
+                          {selectedIncident.detectionSource === 'provider' && 'Service alert'}
+                          {selectedIncident.detectionSource === 'rule' && 'Safety rule'}
+                          {selectedIncident.detectionSource === 'user_report' && 'User reported'}
                         </p>
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 rounded-lg bg-surface-1 border border-border">
+                          <p className="text-xs text-text-tertiary mb-1">Customer notified</p>
+                          <StatusChip 
+                            status={selectedIncident.customerNotified === 'yes' ? 'success' : selectedIncident.customerNotified === 'queued' ? 'pending' : 'warning'} 
+                            label={selectedIncident.customerNotified === 'yes' ? 'Yes' : selectedIncident.customerNotified === 'queued' ? 'Queued' : 'No'} 
+                          />
+                        </div>
+                        <div className="p-3 rounded-lg bg-surface-1 border border-border">
+                          <p className="text-xs text-text-tertiary mb-1">Proof status</p>
+                          <StatusChip 
+                            status={selectedIncident.proofStatus === 'ok' ? 'success' : selectedIncident.proofStatus === 'missing' ? 'critical' : 'pending'} 
+                            label={selectedIncident.proofStatus === 'ok' ? 'Recorded' : selectedIncident.proofStatus === 'missing' ? 'Missing' : 'Pending'} 
+                          />
+                        </div>
+                      </div>
+                      {selectedIncident.recommendedAction && (
+                        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                          <p className="text-xs text-text-tertiary mb-1">Recommended action</p>
+                          <p className="text-sm text-primary">{selectedIncident.recommendedAction}</p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -234,6 +307,26 @@ export default function Incidents() {
                         <div>
                           <Label className="text-text-tertiary text-xs">Provider</Label>
                           <p className="text-sm">{selectedIncident.provider}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-text-tertiary text-xs">Detection Source</Label>
+                          <p className="text-sm font-mono">{selectedIncident.detectionSource}</p>
+                        </div>
+                        <div>
+                          <Label className="text-text-tertiary text-xs">Correlation ID</Label>
+                          <p className="text-sm font-mono text-xs">{selectedIncident.correlationId || '—'}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-text-tertiary text-xs">Customer Notified</Label>
+                          <StatusChip status={selectedIncident.customerNotified === 'yes' ? 'success' : 'warning'} label={selectedIncident.customerNotified} />
+                        </div>
+                        <div>
+                          <Label className="text-text-tertiary text-xs">Proof Status</Label>
+                          <StatusChip status={selectedIncident.proofStatus === 'ok' ? 'success' : selectedIncident.proofStatus === 'missing' ? 'critical' : 'pending'} label={selectedIncident.proofStatus} />
                         </div>
                       </div>
                       <div>
