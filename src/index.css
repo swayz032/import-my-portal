@@ -5,13 +5,13 @@
 @layer base {
   :root {
     /* Premium Enterprise Dark Theme */
-    --background: 240 10% 9%;
+    --background: 240 10% 4%;
     --foreground: 0 0% 98%;
     
-    --card: 240 10% 11%;
+    --card: 240 10% 7%;
     --card-foreground: 0 0% 98%;
     
-    --popover: 240 10% 12%;
+    --popover: 240 10% 8%;
     --popover-foreground: 0 0% 98%;
     
     --primary: 187 82% 53%;
@@ -42,9 +42,9 @@
     --radius: 0.625rem;
     
     /* Premium Surface variants */
-    --surface-1: 240 10% 11%;
-    --surface-2: 240 8% 14%;
-    --surface-3: 240 7% 17%;
+    --surface-1: 240 10% 7%;
+    --surface-2: 240 8% 10%;
+    --surface-3: 240 7% 13%;
     
     /* Text variants */
     --text-primary: 0 0% 98%;
@@ -52,7 +52,7 @@
     --text-tertiary: 0 0% 50%;
     
     /* Premium Sidebar */
-    --sidebar-background: 240 10% 7%;
+    --sidebar-background: 240 10% 5%;
     --sidebar-foreground: 0 0% 70%;
     --sidebar-primary: 187 82% 53%;
     --sidebar-primary-foreground: 240 10% 4%;
@@ -62,14 +62,14 @@
     --sidebar-ring: 187 82% 53%;
     
     /* Premium Effects */
-    --glass-bg: 240 10% 12% / 0.8;
+    --glass-bg: 240 10% 8% / 0.8;
     --glass-border: 0 0% 100% / 0.06;
     --glow-primary: 187 82% 53% / 0.15;
     --shadow-premium: 0 4px 24px -4px hsl(0 0% 0% / 0.5);
   }
 
   .dark {
-    --background: 240 10% 9%;
+    --background: 240 10% 4%;
     --foreground: 0 0% 98%;
   }
 }
