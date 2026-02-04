@@ -38,6 +38,11 @@ import AcquisitionAnalytics from "./pages/business/AcquisitionAnalytics";
 import SkillPackRegistry from "./pages/skillpacks/Registry";
 import SkillPackAnalytics from "./pages/skillpacks/Analytics";
 
+// Control Plane pages
+import ControlPlaneRegistry from "./pages/control-plane/Registry";
+import ControlPlaneBuilder from "./pages/control-plane/Builder";
+import ControlPlaneRollouts from "./pages/control-plane/Rollouts";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -263,6 +268,38 @@ const App = () => (
                   <ProtectedRoute>
                     <AppLayout>
                       <SkillPackAnalytics />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Control Plane Routes */}
+              <Route
+                path="/control-plane/registry"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ControlPlaneRegistry />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/control-plane/builder"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ControlPlaneBuilder />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/control-plane/rollouts"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ControlPlaneRollouts />
                     </AppLayout>
                   </ProtectedRoute>
                 }
