@@ -1,361 +1,293 @@
 
 
-# Premium Non-Coder Admin Portal Transformation
+# Complete Premium Non-Coder Admin Portal Transformation
 
-## Vision
-Transform the Aspire Admin Portal into a **premium, story-driven experience** where a non-coder founder can:
-1. **Login and instantly understand** what's happening with their business
-2. **See visual stories** through charts, diagrams, and progress indicators
-3. **Always have Ava available** as a floating assistant for help
-4. **Know exactly what to do next** with clear, prioritized action guidance
+## Issues Identified
 
----
-
-## Current State Assessment
-
-### What's Working Well
-- Operator/Engineer toggle already simplifies language
-- AvaHero on LLM Ops Desk is excellent (status sentences, step indicators)
-- Trust Spine Health section exists but is buried
-- Premium visual theme is partially implemented
-
-### What Needs Improvement
-- **Dashboard is overwhelming**: 8+ KPI cards, tabs, multiple tables all at once
-- **No story arc**: Data exists but doesn't tell a narrative
-- **Ava is hidden**: Only accessible via LLM Ops Desk page
-- **No "what to do today"**: User must figure out priorities themselves
-- **Empty states are cold**: Just text, no illustrations or guidance
-- **Charts lack headlines**: Numbers without context or insights
-
----
-
-## Implementation Plan
-
-### Phase 1: Create a Focused "Home" Experience
-
-#### File: `src/pages/Home.tsx` (NEW)
-A new landing page that replaces the overwhelming Dashboard as the default route.
-
-**Layout Structure:**
-```text
-+-----------------------------------------------+
-|  Welcome Back, [Name]                         |
-|  Good morning! Here's your business at a      |
-|  glance.                                      |
-+-----------------------------------------------+
-|                                               |
-|  [ HERO METRICS - 3 Large Cards ]             |
-|  +----------+ +----------+ +----------+       |
-|  | MRR      | | Runway   | | Health   |       |
-|  | $45,000  | | 18 mos   | | All Good |       |
-|  |  ↑ 5%    | |          | | 3 issues |       |
-|  +----------+ +----------+ +----------+       |
-|                                               |
-+-----------------------------------------------+
-|                                               |
-|  [ WHAT TO DO TODAY ]                         |
-|  Priority actions ranked by urgency           |
-|  +-----------------------------------------+  |
-|  | 1. Approve invoice for Acme Corp    [→] |  |
-|  | 2. Review failed payment retry      [→] |  |
-|  | 3. Check incident: API slowdown     [→] |  |
-|  +-----------------------------------------+  |
-|                                               |
-+-----------------------------------------------+
-|                                               |
-|  [ STORY CARDS - Visual Insights ]            |
-|  +-------------------+ +-------------------+  |
-|  | Revenue is        | | Your team         |  |
-|  | growing!          | | handled 142       |  |
-|  | [Spark Chart]     | | tasks today       |  |
-|  | +12% this month   | | [Progress Ring]   |  |
-|  +-------------------+ +-------------------+  |
-|                                               |
-+-----------------------------------------------+
+### Issue 1: Dashboard Still Appears in Sidebar
+The old Dashboard page is still accessible via the sidebar navigation. The sidebar in `src/components/layout/Sidebar.tsx` still has `/dashboard` as the first nav item:
+```typescript
+const navItems = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },  // OLD - should be replaced
+  ...
+];
 ```
+**Solution:** Replace Dashboard with Home in the sidebar navigation, making Home the primary landing page.
 
-**Components to Create:**
-- `HeroMetricCard` - Large, visual KPI with trend indicator and sparkline
-- `PriorityActionList` - Ranked todo list with urgency colors
-- `StoryInsightCard` - Visual card with chart + headline insight
-
-#### File: `src/components/home/HeroMetricCard.tsx` (NEW)
-Premium oversized KPI card with:
-- Large value display (32-48px font)
-- Sparkline mini-chart showing 7-day trend
-- Trend badge with arrow and percentage
-- Subtle glow effect on positive trends
-- Click to drill into details
-
-#### File: `src/components/home/PriorityActionList.tsx` (NEW)
-"What to do today" component with:
-- Ranked list of 3-7 priority items
-- Urgency indicators (red/yellow/green dots)
-- Plain English descriptions ("Approve payment" not "APR-2024-0034")
-- Single-click action buttons
-- Celebration animation when completed
-
-#### File: `src/components/home/StoryInsightCard.tsx` (NEW)
-Visual storytelling cards featuring:
-- Headline insight in plain English ("Revenue grew 12%!")
-- Supporting chart (sparkline, progress ring, or mini bar chart)
-- "Learn more" link to detailed page
-- Premium glass effect with gradient border
-
----
-
-### Phase 2: Floating Ava Assistant (Always Available)
-
-#### File: `src/components/ava/AvaFloatingButton.tsx` (NEW)
-Persistent floating button in bottom-right corner:
-- Animated orb thumbnail (mini version of video orb)
-- Gentle pulse animation when idle
-- Badge indicator when Ava has suggestions
-- Click to open quick chat panel
-
-**Design:**
-```text
-                                    +-------+
-                                    |       |
-                                    |  Ava  |
-                                    |  (◉)  |  <- Animated orb
-                                    |       |
-                                    +-------+
-                                       ▲
-                               Floating button
+### Issue 2: User Name Shows Email Username Instead of "Mr. Scott"
+The greeting in `src/pages/Home.tsx` line 89 uses the email username:
+```typescript
+{getGreeting()}{user?.email ? `, ${user.email.split('@')[0]}` : ''}! 👋
 ```
+And the AuthContext stores `name` as `email.split('@')[0]`.
 
-#### File: `src/components/ava/AvaQuickPanel.tsx` (NEW)
-Slide-up panel when clicking Ava button:
-- Recent context summary ("You have 3 pending approvals")
-- Quick action suggestions
-- "Open full session" link to LLM Ops Desk
-- Voice activation button
+**Solution:** 
+- Add a `displayName` field to the User interface
+- Create a smart formatter that parses names like "tonioscott39" → "Mr. Scott"
+- Update the greeting and header to use formal naming
 
-**Panel Content:**
-- Greeting based on time of day
-- Proactive suggestions based on dashboard state
-- Quick actions: "Review approvals", "Check incidents", "See revenue"
+### Issue 3: Subpages Lack Premium Visual Treatment
+The new Home page has the premium non-coder layout with:
+- Hero metric cards with sparklines
+- Story insight cards with visual narratives
+- "What to do today" priority actions
 
-#### File: `src/components/layout/AppLayout.tsx` (MODIFY)
-Add `<AvaFloatingButton />` to the layout so it appears on every page.
-
----
-
-### Phase 3: Chart Headlines & Visual Insights
-
-#### File: `src/components/charts/ChartWithHeadline.tsx` (NEW)
-Wrapper component for all charts that adds:
-- **Headline**: Plain English insight ("Revenue grew 12% this month")
-- **Subtext**: Supporting context ("Best month since launch")
-- **Chart**: The actual visualization
-- **Action**: Optional "Learn more" or drill-down link
-
-#### File: `src/pages/business/AcquisitionAnalytics.tsx` (MODIFY)
-Update existing charts to use `ChartWithHeadline`:
-- Channel performance: "Direct traffic is your best channel"
-- Funnel chart: "45% of visitors become customers"
-- Demographics: "25-34 year olds convert best"
-
-#### File: `src/pages/business/RunwayBurn.tsx` (MODIFY)
-Add scenario presets for non-coders:
-- "Conservative" - Minimal spend, longest runway
-- "Balanced" - Moderate growth investment
-- "Aggressive" - Fast growth, shorter runway
-One-click buttons to apply presets instead of manual sliders.
+But other pages (Approvals, Incidents, Activity, Safety, Customers, Subscriptions, Connected Apps) still use the old layout with:
+- Dense data tables
+- Technical KPI cards
+- No visual storytelling
+- No clear "what to do next" guidance
 
 ---
 
-### Phase 4: Illustrated Empty States
+## Transformation Plan
 
-#### File: `src/components/shared/EmptyState.tsx` (NEW)
-Premium empty state component with:
-- Custom illustration (abstract shapes, not cartoon characters)
-- Headline in plain English
-- Supportive description
-- Primary CTA button
-- Optional secondary action
+### Phase 1: Fix Sidebar Navigation
 
-**Variants:**
-- `no-data` - "Nothing here yet"
-- `all-done` - "You're all caught up!" (celebration)
-- `loading` - Skeleton with shimmer
-- `error` - Friendly error with retry
+**File: `src/components/layout/Sidebar.tsx`**
+- Replace `/dashboard` with `/home` as the first nav item
+- Update label from "Dashboard" to "Home"
+- Update icon to Home icon for clarity
+- Keep Dashboard as secondary option for users who want detailed view
 
-#### File: `src/assets/illustrations/` (NEW)
-SVG illustrations for empty states:
-- `empty-inbox.svg` - No pending items
-- `celebration.svg` - All tasks complete
-- `chart-empty.svg` - No data to display
-- `search-empty.svg` - No results found
+### Phase 2: Smart User Name Formatting
 
-#### Apply to All Pages
-Update all DataTable and Panel components to use `<EmptyState>` instead of plain text messages.
+**File: `src/contexts/AuthContext.tsx`**
+- Add `displayName` and `formalName` fields to User interface
+- Create a name parser that:
+  - Extracts name parts from email/username (e.g., "tonioscott39" → "tonio" + "scott")
+  - Capitalizes and formats as "Mr. Scott" or "Ms. [LastName]"
+  - Falls back to first name if last name unclear
 
----
+**File: `src/pages/Home.tsx`**
+- Update greeting to use formal name: "Good morning, Mr. Scott!"
 
-### Phase 5: Onboarding & Getting Started
+**File: `src/components/layout/Header.tsx`**
+- Update user display to show proper name
 
-#### File: `src/components/onboarding/GettingStartedChecklist.tsx` (NEW)
-First-time user checklist panel:
-- Step-by-step setup guide
-- Visual progress indicator (ring chart)
-- Celebration animation on completion
-- Dismissible after complete
+### Phase 3: Create Reusable Premium Page Components
 
-**Steps:**
-1. "Welcome! Review your dashboard" (auto-complete)
-2. "Connect your first app" → Link to Connected Apps
-3. "Meet Ava" → Opens Ava quick panel
-4. "Approve your first action" → Link to Approvals
-5. "You're ready!" → Celebration + dismiss
+**File: `src/components/shared/PageHero.tsx` (NEW)**
+A consistent page header component with:
+- Welcoming headline with context
+- Subtitle explaining what the page shows
+- Optional status summary badge
+- Premium glassmorphism styling
 
-#### File: `src/pages/Home.tsx` (MODIFY)
-Show `<GettingStartedChecklist>` prominently for new users, then collapse to a "Setup Progress" card after completion.
+**File: `src/components/shared/QuickStats.tsx` (NEW)**
+A compact stats bar using the HeroMetricCard style but smaller:
+- 2-4 key metrics per page
+- Visual status indicators
+- Click-to-drill-down links
 
----
+**File: `src/components/shared/WhatToDoSection.tsx` (NEW)**
+Reusable "What to do" component for any page:
+- Filtered priority actions relevant to that page
+- Urgency color coding
+- One-click action buttons
 
-### Phase 6: Navigation Simplification
+**File: `src/components/shared/InsightPanel.tsx` (NEW)**
+Visual insight panels for data storytelling:
+- Plain English headline about the data
+- Supporting chart/visualization
+- Context about what it means
 
-#### File: `src/components/layout/Sidebar.tsx` (MODIFY)
-Simplify navigation for Operator mode:
-- **Quick Access** section at top with 3-4 most-used pages
-- Visual urgency badges on items needing attention
-- Collapse "Business Control" and "Skill Packs" by default
-- Add "Help" link that opens Ava
+### Phase 4: Transform Each Subpage
 
-**Updated Structure:**
+#### **Approvals Page** (`src/pages/Approvals.tsx`)
+Current: Dense table with tabs and detail panel
+Transform to:
+- Hero section: "3 decisions waiting for you"
+- Visual priority queue (like PriorityActionList)
+- Simplified approval cards with one-click Approve/Deny
+- Story insight: "You've approved 12 requests this week"
+
+#### **Incidents Page** (`src/pages/Incidents.tsx`)
+Current: Table with severity filters and detail panel
+Transform to:
+- Hero section: "2 issues need your attention" or "All clear!"
+- Visual issue cards with urgency indicators
+- Timeline visualization of recent incidents
+- Story insight: "Most issues are API-related this week"
+
+#### **Activity Page** (`src/pages/Activity.tsx`)
+Current: Technical receipt log with filters
+Transform to:
+- Hero section: "Your team handled 142 tasks today"
+- Activity timeline with visual icons
+- Story insight: "Peak activity was at 2pm"
+- Simplified filters (hide technical IDs in operator mode)
+
+#### **Safety Page** (`src/pages/Safety.tsx`)
+Current: Toggle controls with autonomy levels
+Transform to:
+- Hero section with clear status: "Everything is running normally" or "Safety Mode is protecting your system"
+- Visual toggle with clear explanation
+- Story insight: "2 risky actions were blocked this week"
+
+#### **Customers Page** (`src/pages/Customers.tsx`)
+Current: Table with filters and detail panel
+Transform to:
+- Hero section: "24 active customers generating $45,000/month"
+- Customer health visualization (happy/attention/at-risk groupings)
+- Story insight: "Customer satisfaction is up 5%"
+- Visual customer cards instead of dense table
+
+#### **Subscriptions Page** (`src/pages/Subscriptions.tsx`)
+Current: KPI cards and charts with table
+Transform to:
+- Hero section: "Your revenue is growing!"
+- Larger revenue visualization
+- Story insights: "Best month since launch"
+- Simplified plan breakdown
+
+#### **Connected Apps Page** (`src/pages/ConnectedApps.tsx`)
+Current: Table with provider cards
+Transform to:
+- Hero section: "All 6 services connected and healthy"
+- Visual app cards with status indicators
+- Story insight: "Stripe processed 45 payments today"
+
+### Phase 5: Premium Visual Consistency
+
+**File: `src/index.css`**
+Add additional premium classes:
+- `.premium-page-header` - Consistent page header styling
+- `.premium-insight-grid` - Grid layout for insight cards
+- `.premium-action-list` - Styled action lists
+
+**Design Specifications:**
 ```text
-+------------------+
-| [Logo]           |
-+------------------+
-| QUICK ACCESS     |
-|   Home (*)       |  <- Badge for pending items
-|   Approvals (3)  |  <- Count badge
-|   Talk to Ava    |
-+------------------+
-| OPERATIONS       |
-|   Dashboard      |
-|   Activity       |
-|   Incidents (!)  |  <- Alert indicator
-|   Safety         |
-+------------------+
-| BUSINESS (▼)     |  <- Collapsed by default
-+------------------+
-| SKILL PACKS (▼)  |
-+------------------+
+Page Headers:
+  - 32px heading with tracking-tight
+  - Muted subtext explaining the page
+  - Optional status badge (success/warning)
+
+Insight Cards:
+  - Glassmorphism background
+  - Headline first, then supporting data
+  - Sparkline or mini-chart
+  - "Learn more" hover link
+
+Action Lists:
+  - 64px row height for comfortable tapping
+  - 12px urgency dot (red/yellow/green)
+  - One-click action button on right
+  - Subtle hover lift effect
+
+Charts:
+  - Plain English headline above chart
+  - "What this means" subtext
+  - Clean, minimal axis labels
+  - Trend arrow with percentage
 ```
-
-#### File: `src/components/shared/NavBadge.tsx` (NEW)
-Badge component for navigation items showing:
-- Count badges (approvals pending)
-- Alert indicators (incidents open)
-- New/updated indicators
-
----
-
-### Phase 7: Micro-Celebrations & Feedback
-
-#### File: `src/components/feedback/Celebration.tsx` (NEW)
-Celebratory moment component:
-- Confetti animation (subtle, not overwhelming)
-- Success message with checkmark
-- Auto-dismiss after 3 seconds
-
-**Trigger Points:**
-- Approval completed
-- All issues resolved
-- First task of the day completed
-- Milestone reached (100 tasks, etc.)
-
-#### File: `src/components/feedback/ProgressToast.tsx` (NEW)
-Non-blocking progress feedback:
-- Shows during async operations
-- Updates with step progress
-- Success/failure state
 
 ---
 
 ## File Summary
 
-### New Files (16)
-1. `src/pages/Home.tsx` - Focused landing page
-2. `src/components/home/HeroMetricCard.tsx` - Large visual KPIs
-3. `src/components/home/PriorityActionList.tsx` - What to do today
-4. `src/components/home/StoryInsightCard.tsx` - Visual insight cards
-5. `src/components/ava/AvaFloatingButton.tsx` - Persistent Ava button
-6. `src/components/ava/AvaQuickPanel.tsx` - Quick chat panel
-7. `src/components/charts/ChartWithHeadline.tsx` - Charts with insights
-8. `src/components/shared/EmptyState.tsx` - Illustrated empty states
-9. `src/components/shared/NavBadge.tsx` - Navigation badges
-10. `src/components/onboarding/GettingStartedChecklist.tsx` - Setup wizard
-11. `src/components/feedback/Celebration.tsx` - Success animations
-12. `src/components/feedback/ProgressToast.tsx` - Progress feedback
-13. `src/assets/illustrations/empty-inbox.svg`
-14. `src/assets/illustrations/celebration.svg`
-15. `src/assets/illustrations/chart-empty.svg`
-16. `src/assets/illustrations/search-empty.svg`
+### New Files (4)
+1. `src/components/shared/PageHero.tsx` - Premium page header
+2. `src/components/shared/QuickStats.tsx` - Compact metrics bar
+3. `src/components/shared/WhatToDoSection.tsx` - Page-specific actions
+4. `src/components/shared/InsightPanel.tsx` - Data storytelling component
 
-### Modified Files (7)
-1. `src/App.tsx` - Add Home route as default
-2. `src/components/layout/AppLayout.tsx` - Add floating Ava
-3. `src/components/layout/Sidebar.tsx` - Simplify navigation
-4. `src/pages/business/AcquisitionAnalytics.tsx` - Chart headlines
-5. `src/pages/business/RunwayBurn.tsx` - Scenario presets
-6. `src/index.css` - Additional premium animations
-7. `src/data/seed.ts` - Add priority action data
+### Modified Files (11)
+1. `src/components/layout/Sidebar.tsx` - Replace Dashboard with Home
+2. `src/contexts/AuthContext.tsx` - Add formal name formatting
+3. `src/pages/Home.tsx` - Use formal greeting
+4. `src/components/layout/Header.tsx` - Use proper display name
+5. `src/pages/Approvals.tsx` - Premium non-coder layout
+6. `src/pages/Incidents.tsx` - Premium non-coder layout
+7. `src/pages/Activity.tsx` - Premium non-coder layout
+8. `src/pages/Safety.tsx` - Premium non-coder layout
+9. `src/pages/Customers.tsx` - Premium non-coder layout
+10. `src/pages/Subscriptions.tsx` - Premium non-coder layout
+11. `src/pages/ConnectedApps.tsx` - Premium non-coder layout
 
 ---
 
-## Visual Design Specifications
+## Technical Details
 
-### Hero Metric Cards
-```text
-Background:     Linear gradient with subtle glow
-Border:         1px glass effect
-Value Size:     48px font, tracking tight
-Trend Badge:    Pill with arrow icon
-Sparkline:      7-day mini chart, primary color
-Hover:          Lift + shadow increase
+### Name Parsing Logic
+```typescript
+function parseDisplayName(email: string): { firstName: string; lastName: string; formal: string } {
+  // Extract username from email
+  const username = email.split('@')[0];
+  
+  // Common patterns: "firstname.lastname", "firstnamelastname", "firstname_lastname"
+  let parts: string[] = [];
+  
+  if (username.includes('.')) {
+    parts = username.split('.');
+  } else if (username.includes('_')) {
+    parts = username.split('_');
+  } else {
+    // Try to split camelCase or find name boundary
+    // "tonioscott39" → look for common name patterns
+    const match = username.match(/^([a-z]+)([a-z]+)(\d*)$/i);
+    if (match) {
+      parts = [match[1], match[2]];
+    } else {
+      parts = [username.replace(/\d+$/, '')];
+    }
+  }
+  
+  const firstName = capitalize(parts[0] || '');
+  const lastName = capitalize(parts[1] || '');
+  
+  return {
+    firstName,
+    lastName,
+    formal: lastName ? `Mr. ${lastName}` : firstName,
+  };
+}
 ```
 
-### Priority Action List
+### Premium Page Pattern
+Each transformed page will follow this structure:
 ```text
-Item Height:    56px
-Urgency Dot:    8px circle (red/yellow/green)
-Action Button:  Ghost variant, primary on hover
-Animation:      Slide out + fade on complete
-```
-
-### Story Insight Cards
-```text
-Background:     Glass with gradient overlay
-Headline:       18px semibold
-Chart Area:     120px height
-Link:           Primary color, hover underline
-```
-
-### Floating Ava Button
-```text
-Size:           56px circle
-Position:       Fixed bottom-right, 24px from edges
-Animation:      Gentle pulse (3s cycle)
-Shadow:         Premium glow effect
-Panel:          Slide up from button position
++-----------------------------------------------+
+|  Page Hero                                     |
+|  "3 decisions waiting for you"                 |
+|  [Quick Stats Bar: 3 pending | 2 high | 1 low] |
++-----------------------------------------------+
+|                                               |
+|  What to Do                                   |
+|  [Priority Action 1]                     [→]  |
+|  [Priority Action 2]                     [→]  |
+|  [Priority Action 3]                     [→]  |
+|                                               |
++-----------------------------------------------+
+|                                               |
+|  Story Insights                               |
+|  +-------------------+ +-------------------+  |
+|  | You approved 12   | | Avg time: 2 hours |  |
+|  | requests this wk  | | [trend chart]     |  |
+|  +-------------------+ +-------------------+  |
+|                                               |
++-----------------------------------------------+
+|                                               |
+|  All Items (Collapsible Detail Table)         |
+|  [Show if user wants to see everything]       |
+|                                               |
++-----------------------------------------------+
 ```
 
 ---
 
 ## Outcome
 
-After implementation, a non-coder founder will:
-1. **Login** → See a clean Home with 3 hero metrics
-2. **Know priorities** → "What to do today" ranked list
-3. **Understand trends** → Charts with plain English headlines
-4. **Get help anytime** → Ava floating button always available
-5. **Feel guided** → Getting Started checklist for new users
-6. **Feel accomplished** → Celebrations on task completion
-7. **Navigate easily** → Simplified sidebar with badges
+After this transformation, Mr. Scott will:
 
-The admin portal will tell a story: "Your business is healthy, here's what needs your attention, and Ava is ready to help."
+1. **Login** → See "Good morning, Mr. Scott!" on a clean Home page
+2. **Navigate** → Home replaces Dashboard in sidebar (Dashboard still accessible for deep dives)
+3. **Every page** → Follows the premium non-coder pattern:
+   - Clear headline explaining what the page shows
+   - Visual "what to do" priority list
+   - Story insight cards that explain the data
+   - Tables hidden/collapsed by default for those who want details
+4. **Feel understood** → Language is friendly, not technical
+5. **Know priorities** → Every page shows what needs attention first
+6. **Trust the visuals** → Charts and cards tell a story, not just show numbers
 
