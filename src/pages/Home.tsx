@@ -81,12 +81,15 @@ export default function Home() {
     return 'Good evening';
   };
 
+  // Get formal name (e.g., "Mr. Scott" from "tonioscott39")
+  const formalName = user?.parsedName?.formalName || user?.name || 'there';
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Welcome Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
-          {getGreeting()}{user?.email ? `, ${user.email.split('@')[0]}` : ''}! 👋
+          {getGreeting()}, {formalName}! 👋
         </h1>
         <p className="text-muted-foreground text-lg">
           {viewMode === 'operator' 

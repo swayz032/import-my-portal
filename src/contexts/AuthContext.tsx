@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { parseDisplayName, ParsedName } from '@/lib/nameParser';
 
 interface User {
   id: string;
   email: string;
   name: string;
+  parsedName: ParsedName;
 }
 
 interface AuthResult {
@@ -35,10 +37,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string): Promise<AuthResult> => {
     // Mock authentication
+    const parsedName = parseDisplayName(email);
     const mockUser: User = {
       id: 'user-1',
       email,
-      name: email.split('@')[0],
+      name: parsedName.displayName,
+      parsedName,
     };
     setUser(mockUser);
     localStorage.setItem('aspire_user', JSON.stringify(mockUser));
@@ -47,10 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name?: string): Promise<AuthResult> => {
     // Mock registration
+    const parsedName = parseDisplayName(email);
     const mockUser: User = {
       id: 'user-' + Date.now(),
       email,
-      name: name || email.split('@')[0],
+      name: name || parsedName.displayName,
+      parsedName,
     };
     setUser(mockUser);
     localStorage.setItem('aspire_user', JSON.stringify(mockUser));
