@@ -72,6 +72,24 @@ const TERMINOLOGY: Record<string, TermEntry> = {
   'page.providers': { operator: 'Connected Services', engineer: 'Provider Control Center' },
   'page.safety': { operator: 'Safety Controls', engineer: 'Safety Mode' },
   'page.incidents': { operator: 'Issues', engineer: 'Incidents' },
+  
+  // Control Plane terms
+  'term.registry': { operator: 'Agents', engineer: 'Registry Items' },
+  'term.registry.singular': { operator: 'Agent', engineer: 'Registry Item' },
+  'term.rollout': { operator: 'Deployment', engineer: 'Rollout' },
+  'term.rollouts': { operator: 'Deploy Controls', engineer: 'Rollouts' },
+  'term.builder': { operator: 'Create Agent', engineer: 'Agent Builder' },
+  'term.risk_tier': { operator: 'Safety Level', engineer: 'Risk Tier' },
+  'term.approval_required': { operator: 'Needs Your OK', engineer: 'Approval Required' },
+  'term.required_presence': { operator: 'Presence Required', engineer: 'Required Presence' },
+  'term.tool_allowlist': { operator: 'Allowed Tools', engineer: 'Tool Allowlist' },
+  'term.capability': { operator: 'What it can do', engineer: 'Capability' },
+  'term.config_change_proposal': { operator: 'Change Request', engineer: 'Config Change Proposal' },
+  
+  // Page titles
+  'page.registry': { operator: 'Your Agents', engineer: 'Registry Items' },
+  'page.builder': { operator: 'Create Agent', engineer: 'Agent Builder' },
+  'page.rollouts': { operator: 'Deploy Controls', engineer: 'Rollouts' },
 };
 
 // ============================================================================

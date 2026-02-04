@@ -39,6 +39,7 @@ export default function Receipts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [providerFilter, setProviderFilter] = useState<string>('all');
+  const [domainFilter, setDomainFilter] = useState<string>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function Receipts() {
   const filteredReceipts = receipts.filter(r => {
     if (statusFilter !== 'all' && r.status !== statusFilter) return false;
     if (providerFilter !== 'all' && r.provider !== providerFilter) return false;
+    if (domainFilter !== 'all' && r.domain !== domainFilter) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
@@ -66,6 +68,18 @@ export default function Receipts() {
     }
     return true;
   });
+
+  // Get unique domains from data for dynamic filtering
+  const domains = [...new Set(receipts.map(r => r.domain))].sort();
+  
+  // Known domains for special styling
+  const KNOWN_DOMAINS = ['payments', 'security', 'billing', 'integrations', 'webhooks', 'deploy', 'slo', 'alert', 'backup', 'restore', 'dr', 'entitlement', 'rbac'];
+  
+  // Domain counts for facets
+  const domainCounts = domains.reduce((acc, domain) => {
+    acc[domain] = receipts.filter(r => r.domain === domain).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Group by correlation_id
   const groupedReceipts = filteredReceipts.reduce((acc, receipt) => {
@@ -92,11 +106,43 @@ export default function Receipts() {
     }
   };
 
+  const getDomainBadge = (domain: string) => {
+    const isKnown = KNOWN_DOMAINS.includes(domain);
+    const colors: Record<string, string> = {
+      payments: 'bg-success/20 text-success',
+      security: 'bg-destructive/20 text-destructive',
+      deploy: 'bg-primary/20 text-primary',
+      slo: 'bg-warning/20 text-warning',
+      alert: 'bg-destructive/20 text-destructive',
+      backup: 'bg-accent text-accent-foreground',
+      restore: 'bg-accent text-accent-foreground',
+      dr: 'bg-warning/20 text-warning',
+      entitlement: 'bg-primary/20 text-primary',
+      rbac: 'bg-primary/20 text-primary',
+    };
+    return {
+      className: isKnown ? (colors[domain] || 'bg-muted text-muted-foreground') : 'bg-muted text-muted-foreground font-mono',
+      label: isKnown ? domain : `custom: ${domain}`,
+    };
+  };
+
   const columns = viewMode === 'operator' ? [
     { 
       key: 'created_at', 
       header: 'When', 
       render: (r: Receipt) => <span className="text-muted-foreground">{formatTimeAgo(r.created_at)}</span> 
+    },
+    { 
+      key: 'domain', 
+      header: 'Type',
+      render: (r: Receipt) => {
+        const badge = getDomainBadge(r.domain);
+        return (
+          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+            {badge.label}
+          </span>
+        );
+      }
     },
     { key: 'action_type', header: 'What happened' },
     { key: 'provider', header: 'Service', render: (r: Receipt) => r.provider || 'Internal' },
@@ -201,6 +247,19 @@ export default function Receipts() {
             <SelectItem value="all">All Providers</SelectItem>
             {providers.map(p => (
               <SelectItem key={p} value={p!}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={domainFilter} onValueChange={setDomainFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {domains.map(d => (
+              <SelectItem key={d} value={d}>
+                {d} ({domainCounts[d]})
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

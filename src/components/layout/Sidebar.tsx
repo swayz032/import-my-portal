@@ -23,6 +23,9 @@ import {
   Zap,
   Inbox,
   Server,
+  Bot,
+  Layers,
+  ArrowUpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -67,11 +70,18 @@ const skillPackItems = [
   { to: '/skill-packs/analytics', icon: Cpu, label: 'Analytics' },
 ];
 
+const controlPlaneItems = [
+  { to: '/control-plane/registry', icon: Bot, label: 'Your Agents', engineerLabel: 'Registry Items' },
+  { to: '/control-plane/builder', icon: Layers, label: 'Create Agent', engineerLabel: 'Agent Builder' },
+  { to: '/control-plane/rollouts', icon: ArrowUpCircle, label: 'Deploy Controls', engineerLabel: 'Rollouts' },
+];
+
 export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const { viewMode } = useSystem();
   const [businessOpen, setBusinessOpen] = useState(location.pathname.startsWith('/business'));
   const [skillPacksOpen, setSkillPacksOpen] = useState(location.pathname.startsWith('/skill-packs'));
+  const [controlPlaneOpen, setControlPlaneOpen] = useState(location.pathname.startsWith('/control-plane'));
 
   // Persist collapse state
   useEffect(() => {
@@ -257,6 +267,22 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => renderNavItem(item))}
+
+          {/* Control Plane Group - Always visible */}
+          <div className="pt-5 pb-2">
+            {!isCollapsed && (
+              <p className="px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                Control Plane
+              </p>
+            )}
+          </div>
+          {renderCollapsibleGroup(
+            viewMode === 'operator' ? 'Agents' : 'Control Plane', 
+            controlPlaneItems, 
+            controlPlaneOpen, 
+            setControlPlaneOpen, 
+            Bot
+          )}
 
           {/* Business Control Group */}
           {viewMode === 'operator' && (
