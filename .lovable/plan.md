@@ -1,525 +1,472 @@
 
-# AspireOS Admin Portal: Enterprise-Grade Trust Spine Transformation
+# Phase 2: Control Plane UI + Receipts Coverage Expansion
 
 ## Executive Summary
 
-This plan transforms the AspireOS Admin Portal into a **contract-first, enterprise-grade operations console** that is both non-coder friendly (Operator mode) and technically precise (Engineer mode). The architecture will be aligned with the Aspire Ecosystem "Trust Spine" - ensuring the UI always reflects canonical system state and cannot drift from the underlying contracts.
+This plan adds an **enterprise-grade Control Plane** for Agent/Skill Pack management with a modern multi-step builder wizard, rollout controls, and registry management. It also expands Receipts coverage to handle new receipt types (deploy, SLO, alert, backup, DR, entitlement, RBAC) as first-class filters.
 
 ---
 
-## Part A: Critical Cleanup (Prevent Drift)
+## Part A: Repo Hygiene
 
-### Problem Identified
-The project has duplicate folders at root level that can cause import confusion:
-- `/pages/` (root) - OLD, duplicates `/src/pages/`
-- `/components/` (root) - OLD, duplicates `/src/components/`
-- `/hooks/` (root) - OLD, duplicates `/src/hooks/`
-- `/App.tsx` (root) - OLD, system uses `/src/App.tsx`
-- `/index.css` (root) - OLD, system uses `/src/index.css`
+### Files to Remove
 
-### Solution
-Delete these root-level duplicates to ensure `/src/` is the single source of truth:
+The following artifacts should be deleted to keep `/src` as the single source of truth:
 
-**Files to Delete:**
-- `/pages/` folder (entire directory)
-- `/components/` folder (entire directory)
-- `/hooks/` folder (entire directory)
-- `/App.tsx` (root file)
-- `/index.css` (root file)
+1. **`/temp/Aspire-admin-portal.zip`** - Embedded archive artifact
+2. **`/Aspire-admin-portal/`** - Empty/stale directory (contains nested folder)
+3. **`/imported-project/`** - Empty/stale directory (contains nested folder)
+
+The duplicate root-level `/pages`, `/components`, `/hooks`, and `/App.tsx` were already removed in Phase 1.
 
 ---
 
-## Part B: Ecosystem Sync Foundation (Contract-First)
+## Part B: Control Plane Navigation
 
-### B1. Create Canonical Contract Types
+### Modify: `src/components/layout/Sidebar.tsx`
 
-**New File: `/src/contracts/index.ts`**
+Add a new "Control Plane" navigation group with the following routes:
 
 ```text
-+--------------------------------------------------+
-|  CANONICAL TRUST SPINE CONTRACTS                  |
-+--------------------------------------------------+
-|                                                  |
-|  Receipt                                         |
-|  - id, suite_id, office_id, domain              |
-|  - action_type, status, created_at              |
-|  - correlation_id, payload, provider?           |
-|  - request_id?                                  |
-|                                                  |
-|  AuthorityQueueItem (Approval)                  |
-|  - id, suite_id, office_id, status              |
-|  - risk_level, summary, requested_at            |
-|  - decision_at?, decided_by?                    |
-|  - linked_receipt_ids?, correlation_id?         |
-|                                                  |
-|  OutboxJob                                       |
-|  - id, suite_id, office_id, status              |
-|  - queued_at, started_at?, finished_at?         |
-|  - attempts, correlation_id                     |
-|  - action_type, provider?                       |
-|                                                  |
-|  ProviderCallLog                                 |
-|  - id, suite_id, provider                       |
-|  - action_type, status                          |
-|  - started_at, finished_at, correlation_id      |
-|  - request_meta, response_meta                  |
-|                                                  |
-|  Incident                                        |
-|  - id, suite_id, severity, status               |
-|  - created_at, updated_at, summary              |
-|  - linked_receipt_ids?, correlation_id?         |
-|                                                  |
-+--------------------------------------------------+
+CONTROL PLANE
+  - /control-plane/registry     (Registry Items)
+  - /control-plane/builder      (Agent Builder)
+  - /control-plane/rollouts     (Rollouts)
 ```
 
-### B2. Create API Client with Stubbed Functions
+**Operator Mode Labels:**
+- Registry → "Your Agents"
+- Builder → "Create Agent"
+- Rollouts → "Deploy Controls"
 
-**New File: `/src/services/apiClient.ts`**
+**Engineer Mode Labels:**
+- Registry → "Registry Items"
+- Builder → "Agent Builder"
+- Rollouts → "Rollouts"
+
+The Control Plane group will be visible in both Operator and Engineer modes (unlike Business Control which is Operator-only).
+
+---
+
+## Part C: Control Plane Contracts
+
+### New File: `src/contracts/control-plane.ts`
+
+TypeScript interfaces aligned with ecosystem schemas:
 
 ```typescript
-// Stubbed async functions that return canonical-shaped mock data
-export async function listReceipts(filters?: ReceiptFilters): Promise<Receipt[]>
-export async function listAuthorityQueue(filters?: AuthorityQueueFilters): Promise<AuthorityQueueItem[]>
-export async function listOutboxJobs(filters?: OutboxFilters): Promise<OutboxJob[]>
-export async function listProviderCallLogs(filters?: ProviderCallLogFilters): Promise<ProviderCallLog[]>
-export async function listIncidents(filters?: IncidentFilters): Promise<Incident[]>
-export async function listProviders(): Promise<ProviderInfo[]>
+// Registry Item (Agent/Skill Pack definition)
+export interface RegistryItem {
+  id: string;
+  name: string;
+  description: string;
+  type: 'agent' | 'skill_pack';
+  status: 'draft' | 'pending_review' | 'active' | 'deprecated' | 'disabled';
+  version: string;
+  owner: string;
+  category: string;
+  risk_tier: 'low' | 'medium' | 'high';
+  approval_required: boolean;
+  capabilities: RegistryCapability[];
+  tool_allowlist: string[];
+  prompt_config: PromptConfig;
+  governance: GovernanceConfig;
+  created_at: string;
+  updated_at: string;
+  internal: boolean;
+}
+
+export interface RegistryCapability {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface PromptConfig {
+  version: string;
+  content: string;
+  variables: Record<string, string>;
+}
+
+export interface GovernanceConfig {
+  risk_tier: 'low' | 'medium' | 'high';
+  approval_category: string;
+  required_presence: 'none' | 'voice' | 'video';
+  constraints: string[];
+}
+
+// Rollout
+export interface Rollout {
+  id: string;
+  registry_item_id: string;
+  registry_item_name: string;
+  environment: 'development' | 'staging' | 'production';
+  percentage: number;
+  status: 'active' | 'paused' | 'rolling_back' | 'completed';
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  history: RolloutHistoryEntry[];
+}
+
+export interface RolloutHistoryEntry {
+  timestamp: string;
+  action: string;
+  percentage: number;
+  actor: string;
+}
+
+// Config Change Proposal
+export interface ConfigChangeProposal {
+  id: string;
+  registry_item_id: string;
+  change_type: 'create' | 'update' | 'deprecate' | 'rollout_change';
+  status: 'pending' | 'approved' | 'denied' | 'applied';
+  summary: string;
+  diff: ProposalDiff;
+  requested_by: string;
+  requested_at: string;
+  decided_at?: string;
+  decided_by?: string;
+}
+
+export interface ProposalDiff {
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}
 ```
 
-### B3. Add Ecosystem Sync Panel to Advanced Page
+### New File: `src/services/controlPlaneClient.ts`
 
-**Modify: `/src/pages/Advanced.tsx`**
-
-Add new "Ecosystem Sync" section with:
-- Ecosystem Pack Version: `v2.4.1` (mock)
-- Contracts Loaded: YES/NO indicator
-- Schema Drift Warning banner (conditionally shown)
-- Last Sync Check: timestamp display
-
----
-
-## Part C: Operator/Engineer Mode Enhancements
-
-### C1. Persist Mode in localStorage
-
-**Modify: `/src/contexts/SystemContext.tsx`**
+Stubbed async functions with mock data:
 
 ```typescript
-// On mount, read from localStorage
-const [viewMode, setViewMode] = useState<ViewMode>(() => {
-  const stored = localStorage.getItem('aspire-view-mode');
-  return (stored === 'engineer' || stored === 'operator') ? stored : 'operator';
-});
-
-// On change, persist to localStorage
-useEffect(() => {
-  localStorage.setItem('aspire-view-mode', viewMode);
-}, [viewMode]);
+// Stubbed API functions
+listRegistryItems(): Promise<RegistryItem[]>
+getRegistryItem(id: string): Promise<RegistryItem | null>
+createDraftRegistryItem(payload: Partial<RegistryItem>): Promise<RegistryItem>
+updateDraftRegistryItem(id: string, patch: Partial<RegistryItem>): Promise<RegistryItem>
+proposeConfigChange(payload: Partial<ConfigChangeProposal>): Promise<ConfigChangeProposal>
+listRollouts(): Promise<Rollout[]>
+getRollout(id: string): Promise<Rollout | null>
+createRollout(payload: Partial<Rollout>): Promise<Rollout>
+setRolloutPercentage(rolloutId: string, percentage: number): Promise<Rollout>
+pauseRollout(rolloutId: string): Promise<Rollout>
+rollbackRollout(rolloutId: string): Promise<ConfigChangeProposal>
 ```
 
-### C2. Centralized Dictionary System
-
-**New File: `/src/lib/terminology.ts`**
-
-```typescript
-const TERMINOLOGY = {
-  'term.receipt': { operator: 'Proof log', engineer: 'Receipts' },
-  'term.authority_queue': { operator: 'Approval queue', engineer: 'Authority Queue' },
-  'term.outbox': { operator: 'Execution queue', engineer: 'Outbox' },
-  'term.provider_call_log': { operator: 'Service calls', engineer: 'Provider Call Log' },
-  'term.correlation_id': { operator: 'Request link', engineer: 'Correlation ID' },
-  'term.suite_id': { operator: 'Office group', engineer: 'Suite ID' },
-  'term.office_id': { operator: 'Office', engineer: 'Office ID' },
-  'term.idempotency': { operator: 'Duplicate protection', engineer: 'Idempotency' },
-  // ... more terms
-};
-
-export function getTerm(key: string, mode: 'operator' | 'engineer'): string
-export function getGlossaryEntry(key: string, mode: 'operator' | 'engineer'): GlossaryEntry
-```
-
-### C3. Glossary Tooltips Component
-
-**New File: `/src/components/shared/GlossaryTooltip.tsx`**
-
-A tooltip component that explains Trust Spine terms:
-- Suite ID, Office ID, Receipt, Authority Queue
-- Outbox, Provider Call Log, Correlation ID, Idempotency
-
-### C4. Purpose Strip Component
-
-**New File: `/src/components/shared/PurposeStrip.tsx`**
-
-A compact banner at top of major pages:
-- Operator: What this page is for + what actions matter
-- Engineer: Which canonical objects are shown
-
 ---
 
-## Part D: System Pipeline Map Component
+## Part D: Registry Items Page
 
-### New File: `/src/components/shared/SystemPipelineCard.tsx`
-
-A visual pipeline diagram showing the Trust Spine flow:
-
-```text
-Operator Mode:
-+----------+    +--------+    +----------+    +--------+    +------+    +----------+    +-------+
-| Request  | -> | Safety | -> | You      | -> | Queued | -> | Runs | -> | Provider | -> | Proof |
-|          |    | checks |    | approve  |    |        |    |      |    | calls    |    | saved |
-+----------+    +--------+    +----------+    +--------+    +------+    +----------+    +-------+
-
-Engineer Mode:
-+----------+    +--------+    +----------+    +--------+    +----------+    +-----------+    +----------+
-| Proposal | -> | Policy | -> | Approval | -> | Outbox | -> | Executor | -> | Provider  | -> | Receipts |
-|          |    |        |    |          |    |        |    |          |    | CallLog   |    |          |
-+----------+    +--------+    +----------+    +--------+    +----------+    +-----------+    +----------+
-```
-
-**Placement:**
-- Dashboard (main overview)
-- Authority Queue page (approvals context)
-- Receipts page (proof context)
-- Connected Apps / Provider Control Center
-- Safety / Incidents pages
-
----
-
-## Part E: Authority Queue Page (Upgrade Approvals)
-
-### Modify: `/src/pages/Approvals.tsx`
-
-**UI Copy Changes:**
-- Page title: "Authority Queue" (Engineer) / "Approval Queue" (Operator)
-- Route remains `/approvals` for backward compatibility
-
-**Layout Structure:**
-```text
-+----------------------------------------------------------+
-| Purpose Strip: "Decisions waiting for your approval"      |
-+----------------------------------------------------------+
-| [Pending] [Approved] [Denied]  <- Tabs                    |
-+----------------------------------------------------------+
-| Table: status, risk_level, summary, suite_id, office_id, |
-|        requested_at                                       |
-| (Click row to open drawer)                                |
-+----------------------------------------------------------+
-```
-
-**Right-Side Drawer Contains:**
-- Summary and risk flags
-- correlation_id (Engineer mode)
-- linked_receipt_ids with links
-- "What happens if you approve?" (Operator mode)
-- Status transitions and correlation linkage (Engineer mode)
-- Approve / Reject buttons
-
----
-
-## Part F: Receipts Viewer Page
-
-### New File: `/src/pages/Receipts.tsx`
-
-**Contract-Aligned Fields:**
-- suite_id, office_id, domain, action_type
-- status, created_at, correlation_id
-- Expandable payload JSON viewer
-
-**Filters:**
-- domain, status, provider, action_type
-- suite_id, office_id
-
-**Grouping:**
-- Group by correlation_id in UI (collapsible groups)
-
-**Mode-Aware Copy:**
-- Operator: "Proof of what happened"
-- Engineer: "Canonical Receipt objects + JSON"
-
-### Add Route: `/receipts`
-
----
-
-## Part G: Outbox + Provider Call Log Pages
-
-### G1. Outbox Section
-
-**New File: `/src/pages/Outbox.tsx`** (or integrate into Automation page)
-
-Table showing OutboxJob entries:
-- id, status, attempts, correlation_id
-- queued_at, started_at, finished_at
-- action_type, provider
-
-### G2. Provider Call Log Section
-
-**New File: `/src/pages/ProviderCallLog.tsx`** (or integrate into Connected Apps)
-
-Table showing ProviderCallLog entries:
-- id, provider, action_type, status
-- duration (calculated from started_at/finished_at)
-- correlation_id
-
-### Add Routes: `/outbox` and `/provider-call-log`
-
----
-
-## Part H: Connected Apps -> Provider Control Center
-
-### Modify: `/src/pages/ConnectedApps.tsx`
-
-**Rename UI Copy:**
-- Page title: "Provider Control Center"
-- Sidebar label: "Providers" or "Provider Control"
-
-**Enhanced Provider Cards:**
-```text
-+------------------------------------------+
-| [Stripe Icon]  STRIPE                    |
-|                                          |
-| Connection:     ● Connected              |
-| Capability:     Writes Enabled           |
-| Last Check:     2 minutes ago            |
-| Receipt Coverage: 94%                    |
-|                                          |
-| [Pause Writes] [Configure]               |
-+------------------------------------------+
-```
-
-**Pause Writes Control:**
-- Button visible on each provider card
-- Disabled when Safety Mode is ON (with tooltip explaining why)
-- Creates approval request when clicked
-
----
-
-## Part I: Safety + Incidents Enhancements
-
-### I1. Safety Page Updates
-
-**Modify: `/src/pages/Safety.tsx`**
-
-Add "What Safety Mode Gates" section:
-
-**Operator Mode:**
-- "When Safety Mode is ON, the system will pause risky operations until you review them."
-- Visual list of gated actions (plain English)
-
-**Engineer Mode:**
-- Gated objects list: Authority Queue (writes), Outbox (execution), Provider writes
-- Policy enforcement indicators
-
-### I2. Incidents Page Updates
-
-**Modify: `/src/pages/Incidents.tsx`**
-
-Enhanced table columns:
-- severity, status, created_at, summary
-- linked_receipt_ids (clickable), correlation_id
-
-Detail drawer enhancements:
-- Timeline visualization (mock trace events)
-- Linked receipts section with direct links
-- "View in Receipts" button
-
----
-
-## Part J: Dashboard Enhancements
-
-### Modify: `/src/pages/Dashboard.tsx`
+### New File: `src/pages/control-plane/Registry.tsx`
 
 **Layout Structure:**
 
 ```text
++----------------------------------------------------------+
+| Page Hero: "Your Agents" / "Registry Items"              |
+| Subtitle: "Manage your automated team members"            |
 +----------------------------------------------------------+
 | Purpose Strip                                             |
 +----------------------------------------------------------+
-| KPI Row:                                                  |
-| [Receipts 24h] [Pending Queue] [Outbox] [Incidents] [Providers]
+| Quick Stats: Total | Active | Draft | High-Risk          |
 +----------------------------------------------------------+
-|                                                          |
-| LEFT COLUMN (2/3 width):                                 |
-| +------------------------+  +------------------------+   |
-| | Authority Queue        |  | Active Incidents       |   |
-| | Top 5 pending items    |  | Top 5 open issues      |   |
-| +------------------------+  +------------------------+   |
-|                                                          |
-| +--------------------------------------------------+    |
-| | Recent Receipts Feed (last 10)                    |    |
-| +--------------------------------------------------+    |
-|                                                          |
-| RIGHT COLUMN (1/3 width):                                |
-| +--------------------------------------------------+    |
-| | System Pipeline Card                              |    |
-| +--------------------------------------------------+    |
-| | Ecosystem Sync Status                             |    |
-| | - Pack Version: v2.4.1                            |    |
-| | - Contracts: Loaded                               |    |
-| | - Last Sync: 2 min ago                            |    |
-| +--------------------------------------------------+    |
-|                                                          |
+| Filters: [Type ▼] [Status ▼] [Risk ▼] [Search...]       |
++----------------------------------------------------------+
+| Table:                                                    |
+| | Name | Type | Status | Risk | Version | Updated |      |
+| (Click row → opens detail drawer)                        |
++----------------------------------------------------------+
+| [+ Create New Agent] Primary CTA                         |
 +----------------------------------------------------------+
 ```
+
+**Detail Drawer (Right Side):**
+- Overview tab: Name, description, status, version
+- Capabilities tab: List of enabled capabilities
+- Governance tab: Risk tier, approval requirements, constraints
+- Versions tab: Version history
+- Rollouts tab: Current deployment status
+
+**Mode-Aware Copy:**
+- Operator: "What it does", "What it can access", "How safe it is"
+- Engineer: registry_item_id, policy references, tool allowlist
 
 ---
 
-## Part K: Quality Bar & Consistency
+## Part E: Agent Builder (Core Deliverable)
 
-### K1. Consistent Spacing & Typography
+### New File: `src/pages/control-plane/Builder.tsx`
 
-**Verify across all pages:**
-- Use `max-w-7xl mx-auto` for content containers
-- Consistent card padding (p-4 or p-6)
-- Typography scale: page-title (text-2xl), section-title (text-lg), body (text-sm)
+A modern multi-step wizard with a left stepper and right live preview panel.
 
-### K2. Empty States with Guidance
+**Layout:**
 
-**Update all empty states to include:**
-- Friendly headline (no technical jargon in Operator mode)
-- Clear explanation of what should appear here
-- Action button or link to relevant page
-
-Example:
 ```text
-+------------------------------------------+
-| [Icon: Inbox]                            |
-|                                          |
-| No pending approvals                     |
-| When someone requests a change, you'll   |
-| see it here for your review.             |
-|                                          |
-| [View Recent Activity]                   |
-+------------------------------------------+
++------------------+----------------------------------------+
+| STEPS            | STEP CONTENT                           |
+|                  |                                        |
+| [1] Identity ●   | [Current step form fields]            |
+| [2] Capabilities |                                        |
+| [3] Governance   |                                        |
+| [4] Prompt       |----------------------------------------|
+| [5] Review       | LIVE PREVIEW                           |
+|                  | +------------------------------------+ |
+|                  | | Agent Card Preview                 | |
+|                  | | Name: My Agent                     | |
+|                  | | Risk: Low ●                        | |
+|                  | | Capabilities: 3                    | |
+|                  | +------------------------------------+ |
++------------------+----------------------------------------+
 ```
 
-### K3. Visual Theme Consistency
+**Step 1: Identity**
+- Name (required)
+- Short description (required)
+- Category selector: "Operations", "Finance", "Sales", "Support", "Legal"
+- Template selector: "Start from scratch" or choose template
+- Internal/External toggle
+- Internal notes (optional, collapsible)
 
-- Dark, high-contrast, premium aesthetic
-- Primary accent: cyan (#06B6D4)
-- Consistent status colors across all pages
-- "Authority Queue" used consistently (no mixing with "Approvals" in copy)
+**Step 2: Capabilities**
+- Capability cards with toggle switches:
+  - Read Data
+  - Write Data
+  - Send Notifications
+  - Trigger Automations
+  - Access External APIs
+- Tool allowlist selector (grouped, searchable)
+- Grouped by category: "Communication", "Data", "Finance", "CRM"
+
+**Step 3: Governance**
+- Risk tier selector with explanations:
+  - Low: "Can run automatically with minimal oversight"
+  - Medium: "Requires periodic review"
+  - High: "Requires approval for most actions"
+- Approval requirement toggle
+- Required presence: "None" / "Voice available" (display-only, no video flows)
+- Constraints editor (add/remove text constraints)
+
+**Step 4: Prompt & Config**
+- Versioned prompt editor (clean textarea)
+- Character count display
+- Config JSON editor with basic validation
+- "Diff from previous version" viewer (simple side-by-side)
+
+**Step 5: Review & Propose**
+- Summary cards for all steps
+- "What happens next" explanation (Operator mode)
+- Creates a ConfigChangeProposal object (stub)
+- Primary CTA: "Submit for Review" / "Create Draft"
+
+**Live Preview Panel:**
+- Shows agent card as it will appear in Registry
+- Updates in real-time as user edits
+- Displays: name, description, risk tier chip, capability count, tool count
+
+---
+
+## Part F: Rollouts Page
+
+### New File: `src/pages/control-plane/Rollouts.tsx`
+
+**Layout Structure:**
+
+```text
++----------------------------------------------------------+
+| Page Hero: "Deploy Controls" / "Rollouts"                 |
+| Subtitle: "Control how agents are deployed"               |
++----------------------------------------------------------+
+| Purpose Strip                                             |
++----------------------------------------------------------+
+| Quick Stats: Active | Paused | Rolling Back              |
++----------------------------------------------------------+
+| Table:                                                    |
+| | Agent | Environment | Current % | Status | Updated |   |
+| (Click row → opens detail drawer)                        |
++----------------------------------------------------------+
+```
+
+**Detail Drawer:**
+- Current settings: percentage, status, environment
+- History timeline with actor + action + timestamp
+- Actions:
+  - "Set Percentage" (slider + confirm button)
+  - "Pause" button
+  - "Rollback" button (creates proposal)
+
+**Safety Mode Integration:**
+- When Safety Mode is ON, disable all rollout modification buttons
+- Show tooltip: "Rollout changes are restricted when Safety Mode is ON"
+
+---
+
+## Part G: Receipts Coverage Expansion
+
+### Modify: `src/pages/Receipts.tsx`
+
+**Add Receipt Type Filter:**
+- New dropdown filter for receipt domain/type prefixes
+- First-class support for:
+  - `deploy.*`
+  - `slo.*`
+  - `alert.*`
+  - `backup.*`
+  - `restore.*`
+  - `dr.*` (disaster recovery)
+  - `entitlement.*`
+  - `rbac.*`
+  - `payments.*` (existing)
+  - `security.*` (existing)
+
+**Receipt Type Facet Selector:**
+- Dynamically populated from observed data
+- Shows count per type
+- Unknown types render with "custom" badge
+
+**Update Mock Data in `src/services/apiClient.ts`:**
+Add sample receipts for each new type:
+```typescript
+{ domain: 'deploy', action_type: 'deploy.release', ... }
+{ domain: 'slo', action_type: 'slo.breach_detected', ... }
+{ domain: 'alert', action_type: 'alert.triggered', ... }
+{ domain: 'backup', action_type: 'backup.completed', ... }
+{ domain: 'dr', action_type: 'dr.failover_initiated', ... }
+{ domain: 'entitlement', action_type: 'entitlement.granted', ... }
+{ domain: 'rbac', action_type: 'rbac.role_assigned', ... }
+```
+
+**Graceful Unknown Type Handling:**
+- If receipt domain is not in known list, render with:
+  - Badge: "custom" in muted style
+  - Full domain name displayed
+  - No filtering restrictions
+
+---
+
+## Part H: Terminology Updates
+
+### Modify: `src/lib/terminology.ts`
+
+Add Control Plane terms:
+
+```typescript
+// Control Plane terms
+'term.registry': { operator: 'Agents', engineer: 'Registry Items' },
+'term.registry.singular': { operator: 'Agent', engineer: 'Registry Item' },
+'term.rollout': { operator: 'Deployment', engineer: 'Rollout' },
+'term.rollouts': { operator: 'Deploy Controls', engineer: 'Rollouts' },
+'term.builder': { operator: 'Create Agent', engineer: 'Agent Builder' },
+'term.risk_tier': { operator: 'Safety Level', engineer: 'Risk Tier' },
+'term.approval_required': { operator: 'Needs Your OK', engineer: 'Approval Required' },
+'term.required_presence': { operator: 'Presence Required', engineer: 'Required Presence' },
+'term.tool_allowlist': { operator: 'Allowed Tools', engineer: 'Tool Allowlist' },
+'term.capability': { operator: 'What it can do', engineer: 'Capability' },
+
+// Glossary entries
+'glossary.registry_item': { ... }
+'glossary.rollout': { ... }
+'glossary.config_change_proposal': { ... }
+```
+
+### Note on "Required Presence"
+The `required_presence` field is **display-only** and shows:
+- **Operator mode:** "Presence required: Voice available" 
+- **Engineer mode:** "required_presence: voice"
+
+No video session flows or session-start UX is implemented. This is purely informational.
+
+---
+
+## Part I: Route Registration
+
+### Modify: `src/App.tsx`
+
+Add new Control Plane routes:
+
+```typescript
+import ControlPlaneRegistry from './pages/control-plane/Registry';
+import ControlPlaneBuilder from './pages/control-plane/Builder';
+import ControlPlaneRollouts from './pages/control-plane/Rollouts';
+
+// Routes
+<Route path="/control-plane/registry" element={<ProtectedRoute><AppLayout><ControlPlaneRegistry /></AppLayout></ProtectedRoute>} />
+<Route path="/control-plane/builder" element={<ProtectedRoute><AppLayout><ControlPlaneBuilder /></AppLayout></ProtectedRoute>} />
+<Route path="/control-plane/rollouts" element={<ProtectedRoute><AppLayout><ControlPlaneRollouts /></AppLayout></ProtectedRoute>} />
+```
 
 ---
 
 ## File Summary
 
-### New Files (12)
-1. `/src/contracts/index.ts` - Canonical Trust Spine types
-2. `/src/services/apiClient.ts` - Stubbed API functions
-3. `/src/lib/terminology.ts` - Operator/Engineer dictionary
-4. `/src/components/shared/GlossaryTooltip.tsx` - Term explanations
-5. `/src/components/shared/PurposeStrip.tsx` - Page purpose banners
-6. `/src/components/shared/SystemPipelineCard.tsx` - Visual pipeline
-7. `/src/pages/Receipts.tsx` - Contract-aligned receipts viewer
-8. `/src/pages/Outbox.tsx` - Outbox job queue viewer
-9. `/src/pages/ProviderCallLog.tsx` - Provider call log viewer
-10. `/src/data/contractMockData.ts` - Mock data matching contracts
+### New Files (7)
+1. `src/contracts/control-plane.ts` - Control Plane contract types
+2. `src/services/controlPlaneClient.ts` - Stubbed Control Plane API
+3. `src/pages/control-plane/Registry.tsx` - Registry Items page
+4. `src/pages/control-plane/Builder.tsx` - Agent Builder wizard
+5. `src/pages/control-plane/Rollouts.tsx` - Rollouts management page
+6. `src/components/control-plane/BuilderSteps.tsx` - Builder step components
+7. `src/components/control-plane/AgentPreviewCard.tsx` - Live preview component
 
-### Modified Files (11)
-1. `/src/contexts/SystemContext.tsx` - localStorage persistence
-2. `/src/pages/Advanced.tsx` - Add Ecosystem Sync panel
-3. `/src/pages/Approvals.tsx` - Authority Queue upgrade
-4. `/src/pages/Dashboard.tsx` - KPI row + pipeline + sync status
-5. `/src/pages/ConnectedApps.tsx` - Provider Control Center
-6. `/src/pages/Safety.tsx` - Gated objects section
-7. `/src/pages/Incidents.tsx` - Receipt linkage + timeline
-8. `/src/components/layout/Sidebar.tsx` - Updated navigation labels
-9. `/src/App.tsx` - Add new routes (Receipts, Outbox, ProviderCallLog)
-10. `/src/index.css` - Any new utility classes needed
-11. `/src/data/seed.ts` - Align existing data with contract shapes
+### Modified Files (5)
+1. `src/components/layout/Sidebar.tsx` - Add Control Plane nav group
+2. `src/App.tsx` - Add Control Plane routes
+3. `src/pages/Receipts.tsx` - Expand receipt type filters
+4. `src/services/apiClient.ts` - Add new receipt type mock data
+5. `src/lib/terminology.ts` - Add Control Plane terminology
 
-### Files to Delete (5)
-1. `/pages/` (entire directory)
-2. `/components/` (entire directory)
-3. `/hooks/` (entire directory)
-4. `/App.tsx` (root)
-5. `/index.css` (root)
+### Files to Delete (3)
+1. `temp/Aspire-admin-portal.zip`
+2. `Aspire-admin-portal/` (directory)
+3. `imported-project/` (directory)
 
 ---
 
-## Technical Implementation Notes
+## Design Specifications
 
-### Contract Shape Alignment
+### Builder Wizard
+- Left stepper: 200px width, fixed position
+- Step indicators: numbered circles with completion checkmarks
+- Current step: primary color highlight
+- Step content area: scrollable with consistent padding
+- Live preview: sticky sidebar, updates in real-time
 
-The existing seed data in `/src/data/seed.ts` already has many of the right fields but needs alignment:
+### Registry Table
+- Row height: 56px for comfortable interaction
+- Status chips: use existing StatusChip component
+- Risk tier: color-coded badges (green/yellow/red)
+- Hover: subtle lift effect
 
-```typescript
-// Current Receipt interface is close but needs:
-// - suite_id (add, currently missing)
-// - office_id (add, currently missing)
-// - domain (add, currently missing)
-// - Rename outcome -> status
+### Rollout Controls
+- Percentage slider: 0-100% with 10% increments
+- Status badges: Active (green), Paused (yellow), Rolling Back (orange)
+- History timeline: vertical layout with timestamps
 
-// Current Approval interface needs:
-// - Rename to AuthorityQueueItem
-// - Add suite_id, office_id
-// - Rename risk -> risk_level
-```
-
-### Routing Structure
-
-```text
-/home                    - Premium Home experience
-/dashboard               - Technical dashboard (existing)
-/approvals               - Authority Queue (renamed in UI)
-/receipts                - NEW: Receipts viewer
-/outbox                  - NEW: Outbox viewer
-/provider-call-log       - NEW: Provider call log
-/activity                - Activity page (existing)
-/safety                  - Safety controls (existing)
-/incidents               - Incidents (existing)
-/connected-apps          - Provider Control Center (renamed)
-/customers               - Customer management (existing)
-/subscriptions           - Subscriptions (existing)
-/advanced                - Advanced tools + Ecosystem Sync
-/llm-ops-desk            - Ava LLM console (existing)
-```
-
-### Sidebar Navigation Updates
-
-```text
-QUICK ACCESS
-  - Home
-  - Authority Queue (was "Approvals")
-  - Receipts (NEW)
-  - Talk to Ava
-
-OPERATIONS
-  - Dashboard
-  - Activity
-  - Outbox (NEW)
-  - Incidents
-  - Safety
-
-PROVIDERS
-  - Provider Control (was "Connected Apps")
-  - Provider Logs (NEW)
-
-BUSINESS (collapsible)
-  - Customers
-  - Subscriptions
-  - ... existing items
-
-ADVANCED
-  - Advanced Tools
-```
+### Receipt Type Badges
+- Known types: colored badges matching domain
+- Unknown types: muted "custom" badge with monospace font
 
 ---
 
 ## Outcome
 
-After implementation, the AspireOS Admin Portal will:
+After Phase 2 implementation:
 
-1. **Be Contract-First**: All UI renders canonical Trust Spine objects (Receipt, AuthorityQueueItem, OutboxJob, ProviderCallLog, Incident) - no ad-hoc UI-only schemas
+1. **Control Plane Navigation** - New sidebar group with Registry, Builder, and Rollouts pages
 
-2. **Prevent Drift**: Ecosystem Sync panel surfaces sync health, schema warnings, and contract version
+2. **Enterprise Agent Builder** - Modern multi-step wizard that is:
+   - No-code-founder friendly (Operator mode)
+   - Technically precise (Engineer mode)
+   - Premium visual design (Linear/Stripe quality)
+   - Contract-aligned with ecosystem schemas
 
-3. **Be Non-Coder Friendly**: Operator mode uses plain English, hides technical IDs, provides action-oriented guidance
+3. **Rollout Management** - Controlled deployment with:
+   - Percentage-based rollouts
+   - Safety Mode integration
+   - Audit trail via proposals
 
-4. **Be Engineer-Ready**: Engineer mode exposes full technical depth with IDs, correlation links, and JSON payloads
+4. **Expanded Receipts** - First-class support for deploy, SLO, alert, backup, DR, entitlement, and RBAC receipt types with graceful unknown type handling
 
-5. **Show System State Visually**: SystemPipelineCard makes the Trust Spine "alive" across key pages
-
-6. **Maintain Premium Quality**: Consistent dark theme, cyan accents, high-contrast, no gibberish text, proper empty states
-
-Make sure to keep theme the same when it comes to the visuals and etc and dashboard theme just integrate the updates without really changing the theme
+5. **Clean Repository** - Removed stale artifacts, `/src` remains single source of truth
