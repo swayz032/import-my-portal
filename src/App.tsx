@@ -39,10 +39,7 @@ import SkillPackRegistry from "./pages/skillpacks/Registry";
 import SkillPackAnalytics from "./pages/skillpacks/Analytics";
 
 // Control Plane pages
-import ControlPlaneRegistry from "./pages/control-plane/Registry";
-import ControlPlaneBuilder from "./pages/control-plane/Builder";
-import ControlPlaneRollouts from "./pages/control-plane/Rollouts";
-import StaffConfigStudio from "./pages/StaffConfigStudio";
+import AgentStudio from "./pages/AgentStudio";
 
 const queryClient = new QueryClient();
 
@@ -274,47 +271,22 @@ const App = () => (
                 }
               />
               
-              {/* Control Plane Routes */}
+              {/* Agent Studio (unified Control Plane) */}
               <Route
-                path="/staff-config"
+                path="/agent-studio"
                 element={
                   <ProtectedRoute>
                     <AppLayout>
-                      <StaffConfigStudio />
+                      <AgentStudio />
                     </AppLayout>
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/control-plane/registry"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <ControlPlaneRegistry />
-                    </AppLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/control-plane/builder"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <ControlPlaneBuilder />
-                    </AppLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/control-plane/rollouts"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <ControlPlaneRollouts />
-                    </AppLayout>
-                  </ProtectedRoute>
-                }
-              />
+              {/* Legacy Control Plane Routes (redirect to Agent Studio) */}
+              <Route path="/staff-config" element={<Navigate to="/agent-studio" replace />} />
+              <Route path="/control-plane/registry" element={<Navigate to="/agent-studio" replace />} />
+              <Route path="/control-plane/builder" element={<Navigate to="/agent-studio?tab=custom" replace />} />
+              <Route path="/control-plane/rollouts" element={<Navigate to="/agent-studio?tab=deploy" replace />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
