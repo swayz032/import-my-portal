@@ -21,6 +21,8 @@ import {
   Cpu,
   ChevronDown,
   Zap,
+  Inbox,
+  Server,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -39,14 +41,17 @@ const SIDEBAR_COLLAPSED_KEY = 'aspire_sidebar_collapsed';
 
 const navItems = [
   { to: '/home', icon: Home, label: 'Home' },
-  { to: '/approvals', icon: CheckCircle, label: 'Approvals' },
+  { to: '/approvals', icon: CheckCircle, label: 'Authority Queue', engineerLabel: 'Authority Queue' },
+  { to: '/receipts', icon: Receipt, label: 'Proof Log', engineerLabel: 'Receipts' },
   { to: '/activity', icon: Activity, label: 'Activity Log' },
+  { to: '/outbox', icon: Inbox, label: 'Task Queue', engineerLabel: 'Outbox' },
   { to: '/safety', icon: Shield, label: 'Safety Mode' },
   { to: '/incidents', icon: AlertTriangle, label: 'Incidents' },
   { to: '/automation', icon: Zap, label: 'Automation' },
+  { to: '/connected-apps', icon: Plug, label: 'Connected Services', engineerLabel: 'Provider Control' },
+  { to: '/provider-call-log', icon: Server, label: 'Service Calls', engineerLabel: 'Provider Logs' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions & Sales' },
-  { to: '/connected-apps', icon: Plug, label: 'Connected Apps' },
   { to: '/advanced', icon: Settings, label: 'Advanced' },
 ];
 
@@ -73,9 +78,11 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  const renderNavItem = (item: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) => {
+  const renderNavItem = (item: { to: string; icon: React.ComponentType<{ className?: string }>; label: string; engineerLabel?: string }) => {
     const isActive = location.pathname === item.to || 
       (item.to === '/home' && location.pathname === '/');
+    
+    const displayLabel = viewMode === 'engineer' && item.engineerLabel ? item.engineerLabel : item.label;
     
     const linkContent = (
       <NavLink
@@ -99,7 +106,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           'h-[18px] w-[18px] flex-shrink-0 transition-colors',
           isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
         )} />
-        {!isCollapsed && <span>{item.label}</span>}
+        {!isCollapsed && <span>{displayLabel}</span>}
       </NavLink>
     );
 
@@ -110,7 +117,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
             {linkContent}
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>
-            {item.label}
+            {displayLabel}
           </TooltipContent>
         </Tooltip>
       );

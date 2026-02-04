@@ -23,6 +23,11 @@ import { PublicRoute } from "./components/auth/PublicRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import AutomationPage from "./pages/Automation";
 
+// New Trust Spine pages
+import Receipts from "./pages/Receipts";
+import Outbox from "./pages/Outbox";
+import ProviderCallLog from "./pages/ProviderCallLog";
+
 // Business Control pages
 import RunwayBurn from "./pages/business/RunwayBurn";
 import CostsUsage from "./pages/business/CostsUsage";
@@ -162,6 +167,38 @@ const App = () => (
                   <ProtectedRoute>
                     <AppLayout>
                       <AutomationPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Trust Spine Pages */}
+              <Route
+                path="/receipts"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Receipts />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/outbox"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Outbox />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/provider-call-log"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ProviderCallLog />
                     </AppLayout>
                   </ProtectedRoute>
                 }
