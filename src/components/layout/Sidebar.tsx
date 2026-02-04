@@ -26,6 +26,7 @@ import {
   Bot,
   Layers,
   ArrowUpCircle,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ const skillPackItems = [
 ];
 
 const controlPlaneItems = [
+  { to: '/staff-config', icon: UserCog, label: 'Staff Config', engineerLabel: 'Staff Config Studio' },
   { to: '/control-plane/registry', icon: Bot, label: 'Your Agents', engineerLabel: 'Registry Items' },
   { to: '/control-plane/builder', icon: Layers, label: 'Create Agent', engineerLabel: 'Agent Builder' },
   { to: '/control-plane/rollouts', icon: ArrowUpCircle, label: 'Deploy Controls', engineerLabel: 'Rollouts' },

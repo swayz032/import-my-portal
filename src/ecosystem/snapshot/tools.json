@@ -1,0 +1,92 @@
+[
+  {
+    "tool_id": "deepgram_flux_stt",
+    "name": "Deepgram Flux STT",
+    "category": "stt",
+    "provider": "deepgram",
+    "requires_secrets": ["DEEPGRAM_API_KEY"],
+    "capabilities": ["real_time_transcription", "speaker_diarization", "punctuation"],
+    "description": "Real-time speech-to-text with high accuracy and low latency."
+  },
+  {
+    "tool_id": "elevenlabs_flash_tts",
+    "name": "ElevenLabs Flash TTS",
+    "category": "tts",
+    "provider": "elevenlabs",
+    "requires_secrets": ["ELEVENLABS_API_KEY"],
+    "capabilities": ["voice_cloning", "multilingual", "low_latency"],
+    "description": "High-quality text-to-speech with natural voice synthesis."
+  },
+  {
+    "tool_id": "brave_search",
+    "name": "Brave Search",
+    "category": "search",
+    "provider": "brave",
+    "requires_secrets": ["BRAVE_API_KEY"],
+    "capabilities": ["web_search", "news_search", "image_search"],
+    "description": "Privacy-focused web search API."
+  },
+  {
+    "tool_id": "tavily_search",
+    "name": "Tavily Search",
+    "category": "search",
+    "provider": "tavily",
+    "requires_secrets": ["TAVILY_API_KEY"],
+    "capabilities": ["ai_search", "summarization", "fact_extraction"],
+    "description": "AI-optimized search with automatic summarization."
+  },
+  {
+    "tool_id": "pdf_preflight",
+    "name": "PDF Preflight",
+    "category": "document",
+    "provider": "internal",
+    "requires_secrets": [],
+    "capabilities": ["pdf_validation", "page_count", "text_extraction"],
+    "description": "Validates and extracts metadata from PDF documents."
+  },
+  {
+    "tool_id": "playwright_pdf_renderer",
+    "name": "Playwright PDF Renderer",
+    "category": "document",
+    "provider": "internal",
+    "requires_secrets": [],
+    "capabilities": ["html_to_pdf", "screenshot", "page_rendering"],
+    "description": "Renders HTML to PDF using headless browser."
+  },
+  {
+    "tool_id": "stripe_invoicing",
+    "name": "Stripe Invoicing",
+    "category": "payment",
+    "provider": "stripe",
+    "requires_secrets": ["STRIPE_SECRET_KEY"],
+    "capabilities": ["create_invoice", "send_invoice", "void_invoice", "list_invoices"],
+    "description": "Create and manage invoices via Stripe."
+  },
+  {
+    "tool_id": "gmail_send",
+    "name": "Gmail Send",
+    "category": "communication",
+    "provider": "google",
+    "requires_secrets": ["GOOGLE_OAUTH_TOKEN"],
+    "capabilities": ["send_email", "draft_email", "reply_email"],
+    "description": "Send and manage emails via Gmail API."
+  },
+  {
+    "tool_id": "gmail_read",
+    "name": "Gmail Read",
+    "category": "communication",
+    "provider": "google",
+    "requires_secrets": ["GOOGLE_OAUTH_TOKEN"],
+    "capabilities": ["read_email", "list_emails", "search_emails"],
+    "description": "Read and search emails via Gmail API."
+  },
+  {
+    "tool_id": "calendar_create",
+    "name": "Calendar Create Event",
+    "category": "calendar",
+    "provider": "google",
+    "requires_secrets": ["GOOGLE_OAUTH_TOKEN"],
+    "capabilities": ["create_event", "update_event", "delete_event"],
+    "description": "Create and manage calendar events."
+  }
+]

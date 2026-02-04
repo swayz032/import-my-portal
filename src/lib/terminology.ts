@@ -86,10 +86,25 @@ const TERMINOLOGY: Record<string, TermEntry> = {
   'term.capability': { operator: 'What it can do', engineer: 'Capability' },
   'term.config_change_proposal': { operator: 'Change Request', engineer: 'Config Change Proposal' },
   
+  // Staff Config Studio terms
+  'term.staff': { operator: 'Team Member', engineer: 'Staff' },
+  'term.staff.plural': { operator: 'Team', engineer: 'Staff Registry' },
+  'term.skillpack': { operator: 'Skill Set', engineer: 'Skillpack' },
+  'term.tool_catalog': { operator: 'Available Actions', engineer: 'Tool Catalog' },
+  'term.runtime_config': { operator: 'Settings', engineer: 'Runtime Config' },
+  'term.approval_mode': { operator: 'How it needs approval', engineer: 'Approval Mode' },
+  'term.approval_mode.auto': { operator: 'Automatic', engineer: 'auto' },
+  'term.approval_mode.voice_confirm': { operator: 'Live presence required', engineer: 'voice_confirm' },
+  'term.approval_mode.async_approval': { operator: 'Queued for approval', engineer: 'async_approval' },
+  'term.approval_mode.escalate': { operator: 'Always escalate', engineer: 'escalate' },
+  'term.rollout_state': { operator: 'Status', engineer: 'Rollout State' },
+  'term.provider_binding': { operator: 'Connected Service', engineer: 'Provider Binding' },
+  
   // Page titles
   'page.registry': { operator: 'Your Agents', engineer: 'Registry Items' },
   'page.builder': { operator: 'Create Agent', engineer: 'Agent Builder' },
   'page.rollouts': { operator: 'Deploy Controls', engineer: 'Rollouts' },
+  'page.staff_config': { operator: 'Staff Config Studio', engineer: 'Staff Runtime Configuration' },
 };
 
 // ============================================================================

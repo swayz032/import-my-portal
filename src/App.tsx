@@ -42,6 +42,7 @@ import SkillPackAnalytics from "./pages/skillpacks/Analytics";
 import ControlPlaneRegistry from "./pages/control-plane/Registry";
 import ControlPlaneBuilder from "./pages/control-plane/Builder";
 import ControlPlaneRollouts from "./pages/control-plane/Rollouts";
+import StaffConfigStudio from "./pages/StaffConfigStudio";
 
 const queryClient = new QueryClient();
 
@@ -274,6 +275,16 @@ const App = () => (
               />
               
               {/* Control Plane Routes */}
+              <Route
+                path="/staff-config"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <StaffConfigStudio />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/control-plane/registry"
                 element={
