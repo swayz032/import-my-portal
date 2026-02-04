@@ -1,10 +1,29 @@
+import { useState, useEffect } from 'react';
 import { Panel } from '@/components/shared/Panel';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, FileSearch, Shield, Key, Download, Lock } from 'lucide-react';
+import { ModeText } from '@/components/shared/ModeText';
+import { StatusChip } from '@/components/shared/StatusChip';
+import { AlertTriangle, FileSearch, Shield, Key, Download, Lock, RefreshCw, CheckCircle, XCircle, Package } from 'lucide-react';
 import { useSystem } from '@/contexts/SystemContext';
+import { getEcosystemSyncStatus } from '@/services/apiClient';
+import { EcosystemSyncStatus } from '@/contracts';
+import { formatTimeAgo } from '@/lib/formatters';
 
 export default function Advanced() {
-  const { systemState } = useSystem();
+  const { systemState, viewMode } = useSystem();
+  const [syncStatus, setSyncStatus] = useState<EcosystemSyncStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSyncStatus();
+  }, []);
+
+  const loadSyncStatus = async () => {
+    setLoading(true);
+    const status = await getEcosystemSyncStatus();
+    setSyncStatus(status);
+    setLoading(false);
+  };
 
   const tools = [
     {
@@ -41,8 +60,101 @@ export default function Advanced() {
     <div className="space-y-6">
       <div className="page-header">
         <h1 className="page-title">Advanced</h1>
-        <p className="page-subtitle">Restricted tools for advanced operations and debugging</p>
+        <p className="page-subtitle">
+          <ModeText 
+            operator="Restricted tools for advanced operations" 
+            engineer="Advanced debugging and ecosystem sync" 
+          />
+        </p>
       </div>
+
+      {/* Ecosystem Sync Panel */}
+      <Panel title={viewMode === 'operator' ? 'System Sync Status' : 'Ecosystem Sync'}>
+        {loading ? (
+          <div className="loading-state">Loading sync status...</div>
+        ) : syncStatus && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 rounded-lg bg-surface-2 border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <Package className="h-4 w-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">
+                    <ModeText operator="Version" engineer="Pack Version" />
+                  </span>
+                </div>
+                <p className="font-mono text-sm">{syncStatus.pack_version}</p>
+              </div>
+              
+              <div className="p-3 rounded-lg bg-surface-2 border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  {syncStatus.contracts_loaded ? (
+                    <CheckCircle className="h-4 w-4 text-success" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    <ModeText operator="Contracts" engineer="Contracts Loaded" />
+                  </span>
+                </div>
+                <p className="text-sm font-medium">
+                  {syncStatus.contracts_loaded ? 'YES' : 'NO'}
+                </p>
+              </div>
+              
+              <div className="p-3 rounded-lg bg-surface-2 border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  {syncStatus.schema_drift_detected ? (
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 text-success" />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    <ModeText operator="Schema Status" engineer="Schema Drift" />
+                  </span>
+                </div>
+                <p className="text-sm font-medium">
+                  {syncStatus.schema_drift_detected ? 'Drift Detected' : 'In Sync'}
+                </p>
+              </div>
+              
+              <div className="p-3 rounded-lg bg-surface-2 border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    <ModeText operator="Last Check" engineer="Last Sync Check" />
+                  </span>
+                </div>
+                <p className="text-sm">{formatTimeAgo(syncStatus.last_sync_check)}</p>
+              </div>
+            </div>
+
+            {syncStatus.schema_drift_detected && syncStatus.drift_warnings.length > 0 && (
+              <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
+                  <div>
+                    <h3 className="text-sm font-medium text-warning">
+                      <ModeText operator="Sync Issues Detected" engineer="Schema Drift Warnings" />
+                    </h3>
+                    <ul className="mt-2 space-y-1">
+                      {syncStatus.drift_warnings.map((warning, i) => (
+                        <li key={i} className="text-sm text-muted-foreground">• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={loadSyncStatus}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <ModeText operator="Check Now" engineer="Refresh Sync" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </Panel>
 
       {/* Warning Banner */}
       <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
@@ -50,7 +162,7 @@ export default function Advanced() {
           <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
           <div>
             <h3 className="text-sm font-medium text-warning">Restricted Area</h3>
-            <p className="text-sm text-text-secondary mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Changes made in this section may require additional approvals. Actions are logged and audited. 
               Use caution when accessing sensitive data or modifying system configurations.
             </p>
@@ -73,7 +185,7 @@ export default function Advanced() {
                     <Lock className="h-4 w-4 text-warning" />
                   )}
                 </div>
-                <p className="text-sm text-text-secondary mb-4">{tool.description}</p>
+                <p className="text-sm text-muted-foreground mb-4">{tool.description}</p>
                 <Button 
                   variant={tool.restricted ? 'outline' : 'default'}
                   className={tool.restricted ? 'border-warning/30 text-warning hover:bg-warning/10' : ''}
@@ -87,29 +199,29 @@ export default function Advanced() {
         ))}
       </div>
 
-      {/* Additional Info */}
+      {/* Access Control */}
       <Panel title="Access Control">
         <div className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg bg-surface-1 border border-border">
             <div>
               <p className="text-sm font-medium">Current Role</p>
-              <p className="text-xs text-text-secondary">Operations Administrator</p>
+              <p className="text-xs text-muted-foreground">Operations Administrator</p>
             </div>
-            <span className="status-chip status-healthy">Active</span>
+            <StatusChip status="success" label="Active" />
           </div>
           <div className="flex items-center justify-between p-3 rounded-lg bg-surface-1 border border-border">
             <div>
               <p className="text-sm font-medium">Safety Mode Override</p>
-              <p className="text-xs text-text-secondary">Ability to bypass safety restrictions</p>
+              <p className="text-xs text-muted-foreground">Ability to bypass safety restrictions</p>
             </div>
-            <span className="status-chip status-critical">Denied</span>
+            <StatusChip status="critical" label="Denied" />
           </div>
           <div className="flex items-center justify-between p-3 rounded-lg bg-surface-1 border border-border">
             <div>
               <p className="text-sm font-medium">Audit Log Access</p>
-              <p className="text-xs text-text-secondary">View and export audit trail</p>
+              <p className="text-xs text-muted-foreground">View and export audit trail</p>
             </div>
-            <span className="status-chip status-healthy">Granted</span>
+            <StatusChip status="success" label="Granted" />
           </div>
         </div>
       </Panel>

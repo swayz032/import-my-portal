@@ -7,6 +7,8 @@ import { Panel } from '@/components/shared/Panel';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusChip } from '@/components/shared/StatusChip';
 import { RiskBadge } from '@/components/shared/RiskBadge';
+import { PurposeStrip } from '@/components/shared/PurposeStrip';
+import { SystemPipelineCard } from '@/components/shared/SystemPipelineCard';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,6 +148,18 @@ export default function Approvals() {
             ? { type: 'success', label: 'All done' }
             : { type: 'warning', label: `${pendingApprovals.length} pending` }}
         />
+
+        {/* Purpose Strip */}
+        <PurposeStrip
+          operatorPurpose="Approve or deny requests that affect your system. Higher-priority items appear first."
+          engineerPurpose="AuthorityQueue items pending decision. Each approval creates a Receipt for audit trail."
+          operatorAction="Review high-risk items first, then work through the queue"
+          engineerObjects={['AuthorityQueueItem', 'Receipt']}
+          variant="compact"
+        />
+
+        {/* System Pipeline */}
+        <SystemPipelineCard variant="compact" highlightStep={2} />
 
         {/* Quick Stats */}
         <QuickStats stats={quickStats} />
