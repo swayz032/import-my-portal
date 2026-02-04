@@ -1,14 +1,19 @@
+import { PageHero } from '@/components/shared/PageHero';
+import { QuickStats } from '@/components/shared/QuickStats';
+import { InsightPanel } from '@/components/shared/InsightPanel';
 import { Panel } from '@/components/shared/Panel';
-import { KPICard } from '@/components/shared/KPICard';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusChip } from '@/components/shared/StatusChip';
 import { subscriptions, businessMetrics, Subscription } from '@/data/seed';
 import { formatCurrency, formatDateShort } from '@/lib/formatters';
-import { DollarSign, Users, FileWarning, CheckCircle, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, TrendingDown, CreditCard, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import { useSystem } from '@/contexts/SystemContext';
 import { ModeText } from '@/components/shared/ModeText';
-import { ModeDetails } from '@/components/shared/ModeDetails';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 const eventData = [
   { name: 'Jan 1', payments: 12, upgrades: 3, downgrades: 1, cancellations: 0 },
@@ -28,6 +33,8 @@ const planBreakdown = [
 
 export default function Subscriptions() {
   const { viewMode } = useSystem();
+  const [showAllItems, setShowAllItems] = useState(false);
+  
   const activeSubscriptions = subscriptions.filter(s => s.status === 'Active' || s.status === 'Trial');
   const overdueSubscriptions = subscriptions.filter(s => s.status === 'Past Due');
 
@@ -51,8 +58,14 @@ export default function Subscriptions() {
     }
   };
 
-  // Operator columns (simplified)
-  const operatorColumns = [
+  const quickStats = [
+    { label: 'MRR', value: formatCurrency(businessMetrics.totalMRR), status: 'success' as const },
+    { label: 'customers', value: businessMetrics.activeCustomers },
+    { label: 'payment issues', value: overdueSubscriptions.length, status: overdueSubscriptions.length > 0 ? 'warning' as const : 'success' as const },
+    { label: 'growth', value: `+${businessMetrics.mrrGrowth}%`, status: 'success' as const },
+  ];
+
+  const columns = viewMode === 'operator' ? [
     { key: 'customerName', header: 'Customer' },
     { key: 'plan', header: 'Plan' },
     { 
@@ -61,11 +74,8 @@ export default function Subscriptions() {
       render: (s: Subscription) => <StatusChip status={getStatusType(s.status)} label={getOperatorStatus(s.status)} /> 
     },
     { key: 'mrr', header: 'Monthly', render: (s: Subscription) => formatCurrency(s.mrr) },
-    { key: 'startedAt', header: 'Started', render: (s: Subscription) => <span className="text-text-secondary">{formatDateShort(s.startedAt)}</span> },
-  ];
-
-  // Engineer columns (full detail)
-  const engineerColumns = [
+    { key: 'startedAt', header: 'Started', render: (s: Subscription) => <span className="text-muted-foreground">{formatDateShort(s.startedAt)}</span> },
+  ] : [
     { key: 'id', header: 'Subscription ID', render: (s: Subscription) => <span className="font-mono text-xs">{s.id}</span> },
     { key: 'customerName', header: 'Customer' },
     { key: 'plan', header: 'Plan' },
@@ -75,51 +85,48 @@ export default function Subscriptions() {
       render: (s: Subscription) => <StatusChip status={getStatusType(s.status)} label={s.status} /> 
     },
     { key: 'mrr', header: 'MRR', render: (s: Subscription) => formatCurrency(s.mrr) },
-    { key: 'startedAt', header: 'Started', render: (s: Subscription) => <span className="text-text-secondary">{formatDateShort(s.startedAt)}</span> },
+    { key: 'startedAt', header: 'Started', render: (s: Subscription) => <span className="text-muted-foreground">{formatDateShort(s.startedAt)}</span> },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="page-header">
-        <h1 className="page-title">
-          <ModeText operator="Revenue & Plans" engineer="Subscriptions & Sales" />
-        </h1>
-        <p className="page-subtitle">
-          <ModeText 
-            operator="See how your business is doing" 
-            engineer="Revenue metrics and subscription management" 
-          />
-        </p>
-      </div>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Hero Section */}
+      <PageHero
+        title={viewMode === 'operator' 
+          ? "Your revenue is growing!" 
+          : `${formatCurrency(businessMetrics.totalMRR)} Monthly Recurring Revenue`}
+        subtitle={viewMode === 'operator' 
+          ? `You're earning ${formatCurrency(businessMetrics.totalMRR)} per month from ${businessMetrics.activeCustomers} customers` 
+          : "Revenue metrics and subscription management"}
+        icon={<DollarSign className="h-6 w-6" />}
+        status={{ type: 'success', label: `+${businessMetrics.mrrGrowth}% growth` }}
+      />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          title={viewMode === 'operator' ? "Monthly Revenue" : "Monthly Recurring Revenue"}
-          value={formatCurrency(businessMetrics.totalMRR)}
-          trend={{ value: businessMetrics.mrrGrowth }}
-          icon={<DollarSign className="h-4 w-4" />}
-          status="success"
+      {/* Quick Stats */}
+      <QuickStats stats={quickStats} />
+
+      {/* Story Insights */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <InsightPanel
+          headline={`Revenue grew ${businessMetrics.mrrGrowth}%`}
+          subtext="Compared to last month"
+          trend="positive"
+          value={`+${businessMetrics.mrrGrowth}%`}
+          icon={<TrendingUp className="h-5 w-5" />}
         />
-        <KPICard
-          title={viewMode === 'operator' ? "Active Customers" : "Active Customers"}
-          value={businessMetrics.activeCustomers}
-          icon={<Users className="h-4 w-4" />}
-          status="success"
+        <InsightPanel
+          headline={overdueSubscriptions.length === 0 ? "No payment issues" : `${overdueSubscriptions.length} payment issue${overdueSubscriptions.length !== 1 ? 's' : ''}`}
+          subtext={overdueSubscriptions.length === 0 ? "All payments on track" : `${formatCurrency(overdueSubscriptions.reduce((sum, s) => sum + s.mrr, 0))} at risk`}
+          trend={overdueSubscriptions.length === 0 ? 'positive' : 'negative'}
+          icon={overdueSubscriptions.length === 0 ? <CreditCard className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
         />
-        <KPICard
-          title={viewMode === 'operator' ? "Payment Issues" : "Overdue Invoices"}
-          value={overdueSubscriptions.length}
-          subtitle={formatCurrency(overdueSubscriptions.reduce((sum, s) => sum + s.mrr, 0))}
-          icon={<FileWarning className="h-4 w-4" />}
-          status={overdueSubscriptions.length > 0 ? 'warning' : 'success'}
-        />
-        <KPICard
-          title={viewMode === 'operator' ? "Pending Requests" : "Open Approvals"}
-          value={3}
-          icon={<CheckCircle className="h-4 w-4" />}
-          status="info"
-          linkTo="/approvals"
+        <InsightPanel
+          headline="Net growth: +$901"
+          subtext="After accounting for churn"
+          trend="positive"
+          icon={<TrendingUp className="h-5 w-5" />}
+          linkTo="/business/revenue-addons"
+          linkLabel="View breakdown"
         />
       </div>
 
@@ -162,101 +169,51 @@ export default function Subscriptions() {
           </div>
         </Panel>
 
-        <Panel title={viewMode === 'operator' ? "Recent Activity" : "Subscription Events"}>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={eventData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" fontSize={12} />
-                <YAxis stroke="rgba(255,255,255,0.5)" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(220 18% 11%)', 
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '8px',
-                    color: 'rgba(255,255,255,0.92)'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="payments" fill="hsl(187 82% 53%)" name="Payments" />
-                <Bar dataKey="upgrades" fill="hsl(142 71% 45%)" name="Upgrades" />
-                <Bar dataKey="downgrades" fill="hsl(38 92% 50%)" name="Downgrades" />
-                <Bar dataKey="cancellations" fill="hsl(0 72% 51%)" name="Cancellations" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-      </div>
-
-      {/* Panels Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Panel title={viewMode === 'operator' ? "Plan Distribution" : "Plans Breakdown"}>
           <div className="space-y-4">
             {planBreakdown.map((plan) => (
-              <div key={plan.plan} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span className="text-sm">{plan.plan}</span>
+              <div key={plan.plan}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <span className="text-sm font-medium">{plan.plan}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{formatCurrency(plan.mrr)}</p>
+                    <p className="text-xs text-muted-foreground">{plan.count} customers</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(plan.mrr)}</p>
-                  <p className="text-xs text-text-secondary">{plan.count} customers • {plan.percent}%</p>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${plan.percent}%` }}
+                  />
                 </div>
               </div>
             ))}
           </div>
         </Panel>
-
-        <Panel title={viewMode === 'operator' ? "Refunds" : "Recent Refunds"}>
-          <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-surface-1 border border-border">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">EduTech Solutions</span>
-                <span className="text-sm text-destructive">{formatCurrency(-299)}</span>
-              </div>
-              <p className="text-xs text-text-secondary">
-                {viewMode === 'operator' ? 'Refunded • Dec 15' : 'Refund processed • Dec 15, 2025'}
-              </p>
-            </div>
-            <p className="text-xs text-text-tertiary text-center">No other refunds in the last 30 days.</p>
-          </div>
-        </Panel>
-
-        <Panel title={viewMode === 'operator' ? "Growth Summary" : "Churn Impact"}>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-surface-1 border border-border">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" />
-                <span className="text-sm">{viewMode === 'operator' ? 'Lost Revenue' : 'Churned MRR'}</span>
-              </div>
-              <span className="text-sm font-medium text-destructive">{formatCurrency(-299)}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-surface-1 border border-border">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-success" />
-                <span className="text-sm">{viewMode === 'operator' ? 'New Revenue' : 'Expansion MRR'}</span>
-              </div>
-              <span className="text-sm font-medium text-success">+{formatCurrency(1200)}</span>
-            </div>
-            <div className="pt-3 border-t border-border">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{viewMode === 'operator' ? 'Net Growth' : 'Net MRR Change'}</span>
-                <span className="text-sm font-semibold text-success">+{formatCurrency(901)}</span>
-              </div>
-            </div>
-          </div>
-        </Panel>
       </div>
 
-      {/* Subscriptions Table */}
-      <Panel title={viewMode === 'operator' ? "All Plans" : "All Subscriptions"} noPadding>
-        <DataTable
-          columns={viewMode === 'operator' ? operatorColumns : engineerColumns}
-          data={subscriptions}
-          keyExtractor={(s) => s.id}
-          emptyMessage="No subscriptions found."
-        />
-      </Panel>
+      {/* Collapsible Subscriptions Table */}
+      <Collapsible open={showAllItems} onOpenChange={setShowAllItems}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full flex items-center justify-between">
+            <span>{viewMode === 'operator' ? 'View all plans' : 'View all subscriptions'}</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${showAllItems ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-4">
+          <Panel noPadding>
+            <DataTable
+              columns={columns}
+              data={subscriptions}
+              keyExtractor={(s) => s.id}
+              emptyMessage="No subscriptions found."
+            />
+          </Panel>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

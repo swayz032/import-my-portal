@@ -26,7 +26,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     await signOut();
   };
 
-  const displayName = user?.email?.split('@')[0] || 'User';
+  // Use parsed formal name for display
+  const displayName = user?.parsedName?.formalName || user?.name || 'User';
 
   return (
     <header className="h-14 border-b border-border bg-background/95 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-40">

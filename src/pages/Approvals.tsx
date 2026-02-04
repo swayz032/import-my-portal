@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { PageHero } from '@/components/shared/PageHero';
+import { QuickStats } from '@/components/shared/QuickStats';
+import { WhatToDoSection, ActionItem } from '@/components/shared/WhatToDoSection';
+import { InsightPanel } from '@/components/shared/InsightPanel';
 import { Panel } from '@/components/shared/Panel';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusChip } from '@/components/shared/StatusChip';
@@ -9,9 +13,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { approvals as initialApprovals, receipts, Approval, Receipt } from '@/data/seed';
 import { formatDate, formatTimeAgo } from '@/lib/formatters';
-import { Check, X, FileText, Link as LinkIcon, Shield } from 'lucide-react';
+import { Check, X, FileText, Link as LinkIcon, Shield, CheckCircle, ChevronDown } from 'lucide-react';
 import { useSystem } from '@/contexts/SystemContext';
 import { ModeText } from '@/components/shared/ModeText';
 import { ModeDetails } from '@/components/shared/ModeDetails';
@@ -23,39 +28,27 @@ export default function Approvals() {
   const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null);
   const [approvalDialog, setApprovalDialog] = useState<{ approval: Approval; action: 'approve' | 'deny' } | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  const [showAllItems, setShowAllItems] = useState(false);
 
   const pendingApprovals = approvalsData.filter(a => a.status === 'Pending');
   const approvedApprovals = approvalsData.filter(a => a.status === 'Approved');
   const deniedApprovals = approvalsData.filter(a => a.status === 'Denied');
-
-  const getApprovalsByTab = () => {
-    switch (activeTab) {
-      case 'pending': return pendingApprovals;
-      case 'approved': return approvedApprovals;
-      case 'denied': return deniedApprovals;
-      default: return approvalsData;
-    }
-  };
 
   const handleApprovalDecision = () => {
     if (!approvalDialog) return;
     
     const newStatus = approvalDialog.action === 'approve' ? 'Approved' : 'Denied';
     
-    // Update approval in UI
     setApprovalsData(prev => prev.map(a => 
       a.id === approvalDialog.approval.id 
         ? { ...a, status: newStatus as Approval['status'], decisionReason }
         : a
     ));
     
-    // Update selected approval if it's the same
     if (selectedApproval?.id === approvalDialog.approval.id) {
       setSelectedApproval(prev => prev ? { ...prev, status: newStatus as Approval['status'], decisionReason } : null);
     }
     
-    // Generate a receipt entry
     const newReceipt: Receipt = {
       id: `RCP-${Date.now()}`,
       timestamp: new Date().toISOString(),
@@ -82,13 +75,32 @@ export default function Approvals() {
     ? localReceipts.filter(r => selectedApproval.evidenceReceiptIds.includes(r.id) || r.linkedApprovalId === selectedApproval.id)
     : [];
 
-  // Operator-friendly columns (hide IDs)
-  const operatorColumns = [
+  const isSafetyModeOn = systemState.safetyMode;
+
+  // Build priority actions from pending approvals
+  const priorityActions: ActionItem[] = pendingApprovals.map(a => ({
+    id: a.id,
+    title: a.summary,
+    description: `${a.type} • ${a.customer}`,
+    urgency: a.risk === 'High' ? 'critical' as const : a.risk === 'Medium' ? 'high' as const : 'medium' as const,
+    linkTo: `/approvals?id=${a.id}`,
+    linkLabel: 'Review',
+  }));
+
+  // Stats for quick overview
+  const quickStats = [
+    { label: 'pending', value: pendingApprovals.length, status: pendingApprovals.length > 0 ? 'warning' as const : 'success' as const },
+    { label: 'high risk', value: pendingApprovals.filter(a => a.risk === 'High').length, status: 'critical' as const },
+    { label: 'approved today', value: approvedApprovals.length, status: 'success' as const },
+  ];
+
+  // Columns for table
+  const columns = viewMode === 'operator' ? [
     { key: 'risk', header: 'Risk', render: (a: Approval) => <RiskBadge risk={a.risk} /> },
     { key: 'type', header: 'Type' },
     { key: 'customer', header: 'Customer' },
     { key: 'summary', header: 'What is being requested', className: 'max-w-xs truncate' },
-    { key: 'requestedAt', header: 'When', render: (a: Approval) => <span className="text-text-secondary">{formatTimeAgo(a.requestedAt)}</span> },
+    { key: 'requestedAt', header: 'When', render: (a: Approval) => <span className="text-muted-foreground">{formatTimeAgo(a.requestedAt)}</span> },
     { 
       key: 'status', 
       header: 'Status', 
@@ -99,16 +111,13 @@ export default function Approvals() {
         />
       ) 
     },
-  ];
-
-  // Engineer columns (include IDs)
-  const engineerColumns = [
+  ] : [
     { key: 'id', header: 'Approval ID', render: (a: Approval) => <span className="font-mono text-xs">{a.id}</span> },
     { key: 'risk', header: 'Risk', render: (a: Approval) => <RiskBadge risk={a.risk} /> },
     { key: 'type', header: 'Type' },
     { key: 'customer', header: 'Customer/Tenant' },
     { key: 'summary', header: 'Summary', className: 'max-w-xs truncate' },
-    { key: 'requestedAt', header: 'Requested', render: (a: Approval) => <span className="text-text-secondary">{formatTimeAgo(a.requestedAt)}</span> },
+    { key: 'requestedAt', header: 'Requested', render: (a: Approval) => <span className="text-muted-foreground">{formatTimeAgo(a.requestedAt)}</span> },
     { 
       key: 'status', 
       header: 'Status', 
@@ -121,273 +130,176 @@ export default function Approvals() {
     },
   ];
 
-  const isSafetyModeOn = systemState.safetyMode;
-
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <div className="page-header">
-          <h1 className="page-title">
-            <ModeText operator="Pending Decisions" engineer="Approvals" />
-          </h1>
-          <p className="page-subtitle">
-            <ModeText 
-              operator="Review and approve or deny requests that need your attention" 
-              engineer="Review and manage pending approval requests" 
-            />
-          </p>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Hero Section */}
+        <PageHero
+          title={pendingApprovals.length === 0 
+            ? "You're all caught up!" 
+            : `${pendingApprovals.length} decision${pendingApprovals.length !== 1 ? 's' : ''} waiting for you`}
+          subtitle={viewMode === 'operator' 
+            ? "Review and approve or deny requests that need your attention" 
+            : "Review and manage pending approval requests"}
+          icon={<CheckCircle className="h-6 w-6" />}
+          status={pendingApprovals.length === 0 
+            ? { type: 'success', label: 'All done' }
+            : { type: 'warning', label: `${pendingApprovals.length} pending` }}
+        />
+
+        {/* Quick Stats */}
+        <QuickStats stats={quickStats} />
+
+        {/* What to Do Section */}
+        {priorityActions.length > 0 && (
+          <WhatToDoSection
+            title={viewMode === 'operator' ? "Decisions to make" : "Pending approvals"}
+            subtitle={`${priorityActions.length} request${priorityActions.length !== 1 ? 's' : ''} need your attention`}
+            actions={priorityActions}
+            maxItems={5}
+          />
+        )}
+
+        {/* Story Insights */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <InsightPanel
+            headline={`You've approved ${approvedApprovals.length} requests`}
+            subtext="This week"
+            trend="positive"
+            icon={<Check className="h-5 w-5" />}
+          />
+          <InsightPanel
+            headline={pendingApprovals.filter(a => a.risk === 'High').length === 0 
+              ? "No high-risk requests" 
+              : `${pendingApprovals.filter(a => a.risk === 'High').length} high-risk pending`}
+            subtext={pendingApprovals.filter(a => a.risk === 'High').length === 0 
+              ? "Everything looks safe" 
+              : "Requires careful review"}
+            trend={pendingApprovals.filter(a => a.risk === 'High').length === 0 ? 'positive' : 'negative'}
+            icon={<Shield className="h-5 w-5" />}
+          />
+          <InsightPanel
+            headline="Average response time"
+            subtext="2 hours this week"
+            value="2h"
+            trend="positive"
+          />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
+        {/* Collapsible Detail Table */}
+        <Collapsible open={showAllItems} onOpenChange={setShowAllItems}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full flex items-center justify-between">
+              <span>{viewMode === 'operator' ? 'View all requests' : 'View all approvals'}</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${showAllItems ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
             <Panel noPadding>
-              <div className="p-4 border-b border-border">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="bg-surface-1">
-                    <TabsTrigger value="pending" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      <ModeText operator="Needs Decision" engineer="Pending" /> ({pendingApprovals.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="approved" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      Approved ({approvedApprovals.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="denied" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                      Denied ({deniedApprovals.length})
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
               <DataTable
-                columns={viewMode === 'operator' ? operatorColumns : engineerColumns}
-                data={getApprovalsByTab()}
+                columns={columns}
+                data={approvalsData}
                 keyExtractor={(a: Approval) => a.id}
                 onRowClick={(a) => setSelectedApproval(a)}
                 emptyMessage={viewMode === 'operator' ? "No decisions needed right now." : "No approvals in this category."}
               />
             </Panel>
-          </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-          {/* Detail Panel */}
-          <div className="xl:col-span-1">
-            {selectedApproval ? (
-              <Panel title={viewMode === 'operator' ? "Request Details" : "Approval Details"}>
-                <div className="space-y-4">
-                  {/* Operator: What happened / Impact / Next step */}
-                  {viewMode === 'operator' ? (
-                    <>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">What is being requested</Label>
-                        <p className="text-sm text-text-secondary">{selectedApproval.summary}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Risk Level</Label>
-                        <div className="mt-1">
-                          <RiskBadge risk={selectedApproval.risk} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Requested By</Label>
-                        <p className="text-sm">{selectedApproval.requestedBy}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Status</Label>
-                        <div className="mt-1">
-                          <StatusChip 
-                            status={selectedApproval.status === 'Pending' ? 'pending' : selectedApproval.status === 'Approved' ? 'success' : 'critical'} 
-                            label={selectedApproval.status}
-                            size="md"
-                          />
-                        </div>
-                      </div>
-                      
-                      {selectedApproval.decisionReason && (
-                        <div>
-                          <Label className="text-text-tertiary text-xs">Decision Reason</Label>
-                          <p className="text-sm text-text-secondary">{selectedApproval.decisionReason}</p>
-                        </div>
-                      )}
-                      
-                      <ModeDetails
-                        summary={
-                          <p className="text-xs text-text-tertiary">
-                            {relatedReceipts.length} proof log(s) available
-                          </p>
-                        }
-                        details={
-                          <div className="space-y-2">
-                            <Label className="text-text-tertiary text-xs">Request ID</Label>
-                            <p className="font-mono text-xs">{selectedApproval.id}</p>
-                            {relatedReceipts.map(r => (
-                              <div key={r.id} className="flex items-center gap-2 p-2 rounded bg-surface-1 border border-border">
-                                <FileText className="h-4 w-4 text-text-tertiary" />
-                                <span className="text-xs font-mono">{r.id}</span>
-                              </div>
-                            ))}
-                          </div>
-                        }
-                        expandLabel="View technical details"
-                        collapseLabel="Hide technical details"
+        {/* Selected Approval Detail Dialog */}
+        <Dialog open={!!selectedApproval} onOpenChange={() => setSelectedApproval(null)}>
+          <DialogContent className="bg-card border-border max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">
+                {viewMode === 'operator' ? "Request Details" : "Approval Details"}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedApproval && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">What is being requested</Label>
+                  <p className="text-sm">{selectedApproval.summary}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Risk Level</Label>
+                    <div className="mt-1"><RiskBadge risk={selectedApproval.risk} /></div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Status</Label>
+                    <div className="mt-1">
+                      <StatusChip 
+                        status={selectedApproval.status === 'Pending' ? 'pending' : selectedApproval.status === 'Approved' ? 'success' : 'critical'} 
+                        label={selectedApproval.status}
                       />
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Approval ID</Label>
-                        <p className="font-mono text-sm">{selectedApproval.id}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Type</Label>
-                        <p className="text-sm">{selectedApproval.type}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Risk Level</Label>
-                        <div className="mt-1">
-                          <RiskBadge risk={selectedApproval.risk} />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Summary</Label>
-                        <p className="text-sm text-text-secondary">{selectedApproval.summary}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Requested By</Label>
-                        <p className="text-sm">{selectedApproval.requestedBy}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Requested At</Label>
-                        <p className="text-sm text-text-secondary">{formatDate(selectedApproval.requestedAt)}</p>
-                      </div>
-                      <div>
-                        <Label className="text-text-tertiary text-xs">Status</Label>
-                        <div className="mt-1">
-                          <StatusChip 
-                            status={selectedApproval.status === 'Pending' ? 'pending' : selectedApproval.status === 'Approved' ? 'success' : 'critical'} 
-                            label={selectedApproval.status}
-                            size="md"
-                          />
-                        </div>
-                      </div>
-
-                      {selectedApproval.decisionReason && (
-                        <div>
-                          <Label className="text-text-tertiary text-xs">Decision Reason</Label>
-                          <p className="text-sm text-text-secondary">{selectedApproval.decisionReason}</p>
-                        </div>
-                      )}
-
-                      {/* Evidence */}
-                      <div className="pt-4 border-t border-border">
-                        <Label className="text-text-tertiary text-xs mb-2 block">Evidence & Related Items</Label>
-                        {relatedReceipts.length > 0 ? (
-                          <div className="space-y-2">
-                            {relatedReceipts.map(r => (
-                              <div key={r.id} className="flex items-center gap-2 p-2 rounded bg-surface-1 border border-border">
-                                <FileText className="h-4 w-4 text-text-tertiary" />
-                                <span className="text-xs font-mono">{r.id}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-text-tertiary">No related receipts.</p>
-                        )}
-                        {selectedApproval.linkedIncidentId && (
-                          <div className="flex items-center gap-2 p-2 rounded bg-surface-1 border border-border mt-2">
-                            <LinkIcon className="h-4 w-4 text-text-tertiary" />
-                            <span className="text-xs font-mono">{selectedApproval.linkedIncidentId}</span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Actions */}
-                  {selectedApproval.status === 'Pending' && (
-                    <div className="pt-4 border-t border-border space-y-2">
-                      {isSafetyModeOn && (
-                        <div className="p-2 rounded bg-warning/10 border border-warning/30 flex items-center gap-2 mb-2">
-                          <Shield className="h-4 w-4 text-warning" />
-                          <span className="text-xs text-warning">Safety Mode is ON - actions restricted</span>
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="flex-1">
-                              <Button 
-                                className="w-full"
-                                onClick={() => setApprovalDialog({ approval: selectedApproval, action: 'approve' })}
-                                disabled={isSafetyModeOn}
-                              >
-                                <Check className="h-4 w-4 mr-2" />
-                                Approve
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          {isSafetyModeOn && (
-                            <TooltipContent>
-                              <p>Restricted when Safety Mode is ON</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="flex-1">
-                              <Button 
-                                variant="outline" 
-                                className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
-                                onClick={() => setApprovalDialog({ approval: selectedApproval, action: 'deny' })}
-                                disabled={isSafetyModeOn}
-                              >
-                                <X className="h-4 w-4 mr-2" />
-                                Deny
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          {isSafetyModeOn && (
-                            <TooltipContent>
-                              <p>Restricted when Safety Mode is ON</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </Panel>
-            ) : (
-              <Panel title={viewMode === 'operator' ? "Request Details" : "Approval Details"}>
-                <div className="text-center py-8 text-text-secondary">
-                  <p>{viewMode === 'operator' ? "Select a request to view details" : "Select an approval to view details"}</p>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Customer</Label>
+                  <p className="text-sm">{selectedApproval.customer}</p>
                 </div>
-              </Panel>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Requested By</Label>
+                  <p className="text-sm">{selectedApproval.requestedBy}</p>
+                </div>
+
+                {selectedApproval.status === 'Pending' && (
+                  <div className="pt-4 border-t border-border space-y-2">
+                    {isSafetyModeOn && (
+                      <div className="p-2 rounded bg-warning/10 border border-warning/30 flex items-center gap-2 mb-2">
+                        <Shield className="h-4 w-4 text-warning" />
+                        <span className="text-xs text-warning">Safety Mode is ON - actions restricted</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1"
+                        onClick={() => setApprovalDialog({ approval: selectedApproval, action: 'approve' })}
+                        disabled={isSafetyModeOn}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                        onClick={() => setApprovalDialog({ approval: selectedApproval, action: 'deny' })}
+                        disabled={isSafetyModeOn}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Deny
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Decision Dialog */}
         <Dialog open={!!approvalDialog} onOpenChange={() => setApprovalDialog(null)}>
           <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-text-primary">
+              <DialogTitle className="text-foreground">
                 {approvalDialog?.action === 'approve' ? 'Approve Request' : 'Deny Request'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-text-secondary mb-2">
-                  <strong>Request:</strong> {approvalDialog?.approval.id}
-                </p>
-                <p className="text-sm text-text-secondary">
-                  {approvalDialog?.approval.summary}
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                {viewMode === 'operator' 
+                  ? `You are about to ${approvalDialog?.action} this request for ${approvalDialog?.approval.customer}.`
+                  : `Confirm ${approvalDialog?.action} for approval ${approvalDialog?.approval.id}`}
+              </p>
               <div className="space-y-2">
-                <Label htmlFor="reason">Decision Reason (required)</Label>
-                <Textarea
-                  id="reason"
+                <Label>{viewMode === 'operator' ? 'Add a note (optional)' : 'Decision Reason (optional)'}</Label>
+                <Textarea 
+                  placeholder={viewMode === 'operator' ? "Why are you making this decision?" : "Enter reason for audit trail..."} 
                   value={decisionReason}
                   onChange={(e) => setDecisionReason(e.target.value)}
-                  placeholder="Enter the reason for your decision..."
-                  className="bg-surface-1 border-border"
+                  className="bg-muted border-border"
                 />
               </div>
             </div>
@@ -397,7 +309,6 @@ export default function Approvals() {
               </Button>
               <Button 
                 onClick={handleApprovalDecision}
-                disabled={!decisionReason.trim()}
                 className={approvalDialog?.action === 'deny' ? 'bg-destructive hover:bg-destructive/90' : ''}
               >
                 {approvalDialog?.action === 'approve' ? 'Approve' : 'Deny'}

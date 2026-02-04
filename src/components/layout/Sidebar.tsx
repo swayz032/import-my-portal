@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import {
-  LayoutDashboard,
+  Home,
   CheckCircle,
   Activity,
   Shield,
@@ -38,7 +38,7 @@ interface SidebarProps {
 const SIDEBAR_COLLAPSED_KEY = 'aspire_sidebar_collapsed';
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/home', icon: Home, label: 'Home' },
   { to: '/approvals', icon: CheckCircle, label: 'Approvals' },
   { to: '/activity', icon: Activity, label: 'Activity Log' },
   { to: '/safety', icon: Shield, label: 'Safety Mode' },
@@ -75,7 +75,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
 
   const renderNavItem = (item: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) => {
     const isActive = location.pathname === item.to || 
-      (item.to === '/dashboard' && location.pathname === '/');
+      (item.to === '/home' && location.pathname === '/');
     
     const linkContent = (
       <NavLink
