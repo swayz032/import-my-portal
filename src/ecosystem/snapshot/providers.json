@@ -1,0 +1,66 @@
+[
+  {
+    "provider_id": "stripe",
+    "name": "Stripe",
+    "lane": "payments",
+    "envs": ["development", "staging", "production"],
+    "capabilities": ["invoicing", "payments", "subscriptions", "refunds"],
+    "status": "connected"
+  },
+  {
+    "provider_id": "qbo",
+    "name": "QuickBooks Online",
+    "lane": "invoicing",
+    "envs": ["production"],
+    "capabilities": ["invoicing", "expenses", "reports", "bank_feeds"],
+    "status": "connected"
+  },
+  {
+    "provider_id": "gusto",
+    "name": "Gusto",
+    "lane": "payroll",
+    "envs": ["production"],
+    "capabilities": ["payroll", "benefits", "compliance", "onboarding"],
+    "status": "pending"
+  },
+  {
+    "provider_id": "plaid",
+    "name": "Plaid",
+    "lane": "banking",
+    "envs": ["development", "production"],
+    "capabilities": ["account_linking", "transactions", "balance", "identity"],
+    "status": "connected"
+  },
+  {
+    "provider_id": "moov",
+    "name": "Moov",
+    "lane": "banking",
+    "envs": ["development"],
+    "capabilities": ["transfers", "wallets", "cards", "ach"],
+    "status": "disconnected"
+  },
+  {
+    "provider_id": "twilio",
+    "name": "Twilio",
+    "lane": "telephony",
+    "envs": ["development", "staging", "production"],
+    "capabilities": ["voice", "sms", "video", "verify"],
+    "status": "connected"
+  },
+  {
+    "provider_id": "openai",
+    "name": "OpenAI",
+    "lane": "ai",
+    "envs": ["development", "staging", "production"],
+    "capabilities": ["chat", "embeddings", "vision", "audio"],
+    "status": "connected"
+  },
+  {
+    "provider_id": "anthropic",
+    "name": "Anthropic",
+    "lane": "ai",
+    "envs": ["development", "production"],
+    "capabilities": ["chat", "analysis", "coding"],
+    "status": "connected"
+  }
+]
