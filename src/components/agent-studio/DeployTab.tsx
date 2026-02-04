@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Slider } from '@/components/ui/slider';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { StaffAvatar } from './StaffAvatar';
 import { 
   Rocket, 
   Pause, 
@@ -16,29 +17,16 @@ import {
   Clock,
   User,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp,
+  CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-// Staff avatar imports
-import avaAvatar from '@/assets/staff/ava.png';
-import sarahAvatar from '@/assets/staff/sarah.png';
-import eliAvatar from '@/assets/staff/eli.png';
-import quinnAvatar from '@/assets/staff/quinn.png';
-import noraAvatar from '@/assets/staff/nora.png';
-
 interface DeployTabProps {
   configs: StaffRuntimeConfig[];
 }
-
-const staffAvatars: Record<string, string> = {
-  ava: avaAvatar,
-  sarah: sarahAvatar,
-  eli: eliAvatar,
-  quinn: quinnAvatar,
-  nora: noraAvatar,
-};
 
 interface RolloutEntry {
   staff_id: string;
@@ -97,9 +85,9 @@ const statusLabels = {
 };
 
 const envLabels = {
-  development: { label: 'Dev', color: 'bg-muted text-muted-foreground' },
-  staging: { label: 'Staging', color: 'bg-primary/20 text-primary' },
-  production: { label: 'Prod', color: 'bg-success/20 text-success' },
+  development: { label: 'Dev', color: 'bg-muted text-muted-foreground border-muted', icon: '🔧' },
+  staging: { label: 'Staging', color: 'bg-primary/20 text-primary border-primary/30', icon: '🧪' },
+  production: { label: 'Production', color: 'bg-success/20 text-success border-success/30', icon: '🚀' },
 };
 
 export function DeployTab({ configs }: DeployTabProps) {
@@ -139,14 +127,16 @@ export function DeployTab({ configs }: DeployTabProps) {
         <div className="p-6 max-w-5xl mx-auto space-y-6">
           {/* Safety Mode Warning */}
           {safetyMode && (
-            <Card className="border-warning/50 bg-warning/10">
-              <CardContent className="p-4 flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+            <Card className="border-warning/50 bg-gradient-to-r from-warning/10 to-warning/5 overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-warning/20 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-warning" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {isOperator ? 'Safety Mode Active' : 'safety_mode: true'}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {isOperator 
                       ? 'Deploy controls are locked. Disable Safety Mode to make changes.'
                       : 'Rollout mutations disabled while safety_mode=true'
@@ -159,55 +149,74 @@ export function DeployTab({ configs }: DeployTabProps) {
 
           {/* Active Rollouts */}
           <div>
-            <h2 className="text-sm font-semibold text-foreground mb-4">
-              {isOperator ? 'Active Deployments' : 'Rollouts'}
-            </h2>
-            <div className="space-y-2">
-              {rollouts.map((rollout) => {
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                {isOperator ? 'Active Deployments' : 'Rollouts'}
+              </h2>
+              <Badge variant="outline" className="text-xs">
+                {rollouts.length} active
+              </Badge>
+            </div>
+            <div className="space-y-3">
+              {rollouts.map((rollout, index) => {
                 const member = getStaffMember(rollout.staff_id);
                 if (!member) return null;
                 const status = statusLabels[rollout.status];
                 const env = envLabels[rollout.environment];
-                const avatarUrl = staffAvatars[rollout.staff_id];
 
                 return (
                   <Card 
                     key={`${rollout.staff_id}-${rollout.environment}`}
-                    className="border-border hover:border-primary/30 transition-colors cursor-pointer"
+                    className={cn(
+                      'border-border overflow-hidden cursor-pointer transition-all duration-200',
+                      'hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
+                      'animate-fade-in'
+                    )}
+                    style={{ animationDelay: `${index * 100}ms` }}
                     onClick={() => handleOpenDetail(rollout)}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-5">
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10 border border-border">
-                          {avatarUrl ? (
-                            <AvatarImage src={avatarUrl} alt={member.name} />
-                          ) : null}
-                          <AvatarFallback className="text-lg bg-surface-2">
-                            {member.avatar_emoji}
-                          </AvatarFallback>
-                        </Avatar>
+                        {/* Premium Avatar */}
+                        <StaffAvatar
+                          staffId={member.staff_id}
+                          name={member.name}
+                          size="md"
+                          status={rollout.status === 'active' ? 'active' : 'paused'}
+                          showStatus
+                        />
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{member.name}</span>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-foreground">{member.name}</span>
                             <Badge variant="outline" className={cn('text-[10px] h-5', env.color)}>
-                              {env.label}
+                              {env.icon} {env.label}
                             </Badge>
                             <Badge variant="outline" className={cn('text-[10px] h-5', status.color)}>
                               {status.label}
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground">
                             {isOperator ? member.title : member.staff_id}
                           </p>
+                          
+                          {/* Progress bar */}
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-muted-foreground">Rollout Progress</span>
+                              <span className="font-medium text-foreground">{rollout.percentage}%</span>
+                            </div>
+                            <Progress value={rollout.percentage} className="h-1.5" />
+                          </div>
                         </div>
 
-                        <div className="text-right">
-                          <p className="text-2xl font-semibold text-foreground">{rollout.percentage}%</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(rollout.updated_at)}</p>
+                        <div className="text-right shrink-0">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(rollout.updated_at)}
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />
                         </div>
-
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
                       </div>
                     </CardContent>
                   </Card>
@@ -216,10 +225,15 @@ export function DeployTab({ configs }: DeployTabProps) {
 
               {rollouts.length === 0 && (
                 <Card className="border-dashed">
-                  <CardContent className="p-8 text-center">
-                    <Rocket className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">
+                  <CardContent className="p-12 text-center">
+                    <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                      <Rocket className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground mb-1">
                       {isOperator ? 'No active deployments' : 'No rollouts configured'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Configure an agent first, then deploy it here
                     </p>
                   </CardContent>
                 </Card>
@@ -233,50 +247,55 @@ export function DeployTab({ configs }: DeployTabProps) {
               <h2 className="text-sm font-semibold text-foreground mb-4">
                 {isOperator ? 'Not Yet Deployed' : 'Pending Rollouts'}
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {notDeployed.map((member) => {
-                  const avatarUrl = staffAvatars[member.staff_id];
-                  return (
-                    <Card key={member.staff_id} className="border-dashed opacity-60">
-                      <CardContent className="p-3 text-center">
-                        <Avatar className="h-10 w-10 mx-auto mb-2 border border-border">
-                          {avatarUrl ? (
-                            <AvatarImage src={avatarUrl} alt={member.name} />
-                          ) : null}
-                          <AvatarFallback className="text-lg bg-surface-2">
-                            {member.avatar_emoji}
-                          </AvatarFallback>
-                        </Avatar>
-                        <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
-                        <p className="text-[10px] text-muted-foreground">Not deployed</p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {notDeployed.map((member, index) => (
+                  <Card 
+                    key={member.staff_id} 
+                    className={cn(
+                      'border-dashed opacity-60 hover:opacity-100 transition-all',
+                      'animate-fade-in'
+                    )}
+                    style={{ animationDelay: `${(rollouts.length + index) * 100}ms` }}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <div className="flex justify-center mb-3">
+                        <StaffAvatar
+                          staffId={member.staff_id}
+                          name={member.name}
+                          size="sm"
+                          status="draft"
+                        />
+                      </div>
+                      <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Not deployed</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Rollout Detail Drawer */}
+      {/* Premium Rollout Detail Drawer */}
       <Sheet open={!!selectedRollout} onOpenChange={(open) => !open && setSelectedRollout(null)}>
         <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
           {selectedRollout && (
             <>
-              <SheetHeader className="p-6 border-b border-border shrink-0">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border border-border">
-                    {staffAvatars[selectedRollout.staff_id] ? (
-                      <AvatarImage src={staffAvatars[selectedRollout.staff_id]} />
-                    ) : null}
-                    <AvatarFallback className="text-xl">
-                      {getStaffMember(selectedRollout.staff_id)?.avatar_emoji}
-                    </AvatarFallback>
-                  </Avatar>
+              <SheetHeader className="p-6 border-b border-border shrink-0 bg-gradient-to-r from-surface-2/50 to-transparent">
+                <div className="flex items-center gap-4">
+                  <StaffAvatar
+                    staffId={selectedRollout.staff_id}
+                    name={getStaffMember(selectedRollout.staff_id)?.name || ''}
+                    size="lg"
+                    status={selectedRollout.status === 'active' ? 'active' : 'paused'}
+                    showStatus
+                  />
                   <div>
-                    <SheetTitle>{getStaffMember(selectedRollout.staff_id)?.name}</SheetTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <SheetTitle className="text-lg">
+                      {getStaffMember(selectedRollout.staff_id)?.name}
+                    </SheetTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {isOperator 
                         ? `${envLabels[selectedRollout.environment].label} deployment`
                         : `${selectedRollout.staff_id} • ${selectedRollout.environment}`
@@ -288,40 +307,42 @@ export function DeployTab({ configs }: DeployTabProps) {
 
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-6">
-                  {/* Current Status */}
+                  {/* Status Cards */}
                   <div className="grid grid-cols-2 gap-4">
-                    <Card className="border-border">
+                    <Card className="border-border bg-gradient-to-br from-card to-surface-2">
                       <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="h-4 w-4 text-primary" />
+                          <span className="text-xs text-muted-foreground">Rollout</span>
+                        </div>
                         <p className="text-3xl font-bold text-foreground">{selectedRollout.percentage}%</p>
-                        <p className="text-xs text-muted-foreground">
-                          {isOperator ? 'Current Rollout' : 'percentage'}
-                        </p>
                       </CardContent>
                     </Card>
-                    <Card className="border-border">
+                    <Card className="border-border bg-gradient-to-br from-card to-surface-2">
                       <CardContent className="p-4">
-                        <Badge className={cn('text-sm', statusLabels[selectedRollout.status].color)}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-success" />
+                          <span className="text-xs text-muted-foreground">Status</span>
+                        </div>
+                        <Badge className={cn('text-sm mt-1', statusLabels[selectedRollout.status].color)}>
                           {statusLabels[selectedRollout.status].label}
                         </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {isOperator ? 'Status' : 'status'}
-                        </p>
                       </CardContent>
                     </Card>
                   </div>
 
                   {/* Set Percentage */}
                   <Card className="border-border">
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-2 bg-gradient-to-r from-surface-2/50 to-transparent">
                       <CardTitle className="text-sm">
                         {isOperator ? 'Adjust Rollout' : 'Set Percentage'}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
+                    <CardContent className="space-y-4 pt-4">
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Target</span>
-                          <span className="text-lg font-semibold">{newPercentage}%</span>
+                          <span className="text-2xl font-bold text-primary">{newPercentage}%</span>
                         </div>
                         <Slider
                           value={[newPercentage]}
@@ -329,16 +350,26 @@ export function DeployTab({ configs }: DeployTabProps) {
                           max={100}
                           step={10}
                           disabled={safetyMode}
+                          className="py-2"
                         />
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>0%</span>
+                          <span>50%</span>
+                          <span>100%</span>
+                        </div>
                       </div>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span>
+                          <span className="block">
                             <Button 
-                              className="w-full" 
+                              className={cn(
+                                'w-full gap-2',
+                                !safetyMode && newPercentage !== selectedRollout.percentage && 
+                                'shadow-[0_0_20px_hsl(var(--primary)/0.2)]'
+                              )}
                               disabled={safetyMode || newPercentage === selectedRollout.percentage}
                             >
-                              <Rocket className="h-4 w-4 mr-2" />
+                              <Rocket className="h-4 w-4" />
                               {isOperator ? 'Apply Changes' : 'Set Percentage'}
                             </Button>
                           </span>
@@ -357,9 +388,9 @@ export function DeployTab({ configs }: DeployTabProps) {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="flex-1">
-                          <Button variant="outline" className="w-full" disabled={safetyMode}>
-                            <Pause className="h-4 w-4 mr-2" />
-                            {isOperator ? 'Pause' : 'Pause Rollout'}
+                          <Button variant="outline" className="w-full gap-2" disabled={safetyMode}>
+                            <Pause className="h-4 w-4" />
+                            Pause
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -370,9 +401,9 @@ export function DeployTab({ configs }: DeployTabProps) {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="flex-1">
-                          <Button variant="outline" className="w-full" disabled={safetyMode}>
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            {isOperator ? 'Rollback' : 'Rollback'}
+                          <Button variant="outline" className="w-full gap-2" disabled={safetyMode}>
+                            <RotateCcw className="h-4 w-4" />
+                            Rollback
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -382,26 +413,29 @@ export function DeployTab({ configs }: DeployTabProps) {
                     </Tooltip>
                   </div>
 
-                  {/* History */}
+                  {/* History Timeline */}
                   <Card className="border-border">
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-2 bg-gradient-to-r from-surface-2/50 to-transparent">
                       <CardTitle className="text-sm">
-                        {isOperator ? 'History' : 'Rollout History'}
+                        {isOperator ? 'Deployment History' : 'Rollout History'}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-4">
                       <div className="space-y-4">
                         {selectedRollout.history.map((entry, idx) => (
                           <div key={idx} className="flex gap-3">
                             <div className="flex flex-col items-center">
-                              <div className="h-2 w-2 rounded-full bg-primary mt-2" />
+                              <div className={cn(
+                                'h-3 w-3 rounded-full mt-1',
+                                idx === 0 ? 'bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]' : 'bg-muted'
+                              )} />
                               {idx < selectedRollout.history.length - 1 && (
                                 <div className="w-px flex-1 bg-border mt-1" />
                               )}
                             </div>
                             <div className="flex-1 pb-4">
                               <p className="text-sm font-medium text-foreground">{entry.action}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
                                 <User className="h-3 w-3" />
                                 <span>{entry.actor}</span>
                                 <span>•</span>
