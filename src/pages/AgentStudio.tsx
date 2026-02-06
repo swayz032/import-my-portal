@@ -10,7 +10,6 @@ import {
 import type { StaffRuntimeConfig } from '@/contracts/ecosystem';
 import { StaffList } from '@/components/agent-studio/StaffList';
 import { ConfigEditor } from '@/components/agent-studio/ConfigEditor';
-import { EffectiveConfig } from '@/components/agent-studio/EffectiveConfig';
 import { CustomAgentsTab } from '@/components/agent-studio/CustomAgentsTab';
 import { DeployTab } from '@/components/agent-studio/DeployTab';
 import { OperatorEngineerToggle } from '@/components/shared/OperatorEngineerToggle';
@@ -46,41 +45,32 @@ export default function AgentStudio() {
   return (
     <div className={cn(
       'flex flex-col',
-      // Break out of AppLayout padding to go full-bleed
       '-m-4 md:-m-6 lg:-m-8',
-      // Fill remaining viewport height (header ~56px)
       'h-[calc(100vh-3.5rem)]'
     )}>
-      {/* Compact Premium Header Bar */}
+      {/* Header Bar */}
       <div className={cn(
         'shrink-0 border-b border-border',
         'bg-gradient-to-r from-surface-1 via-background to-background'
       )}>
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between px-6 h-14">
+          <div className="flex items-center gap-3">
             <div className={cn(
-              'h-10 w-10 rounded-xl flex items-center justify-center',
+              'h-9 w-9 rounded-xl flex items-center justify-center',
               'bg-gradient-to-br from-primary/20 to-primary/5',
               'border border-primary/20',
-              'shadow-[0_0_24px_hsl(var(--primary)/0.12)]'
+              'shadow-[0_0_20px_hsl(var(--primary)/0.1)]'
             )}>
-              <Bot className="h-5 w-5 text-primary" />
+              <Bot className="h-4.5 w-4.5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight">
+              <h1 className="text-lg font-bold text-foreground tracking-tight leading-tight">
                 {isOperator ? 'Agent Studio' : 'Agent Configuration'}
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {isOperator 
-                  ? 'Configure and deploy your AI workforce'
-                  : 'staff_runtime_config + registry_items management'
-                }
-              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-5">
-            {/* Premium Tab Navigation — inline with header */}
+          <div className="flex items-center gap-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className={cn(
                 'h-9 p-0.5 gap-0.5',
@@ -89,7 +79,7 @@ export default function AgentStudio() {
                 <TabsTrigger 
                   value="staff" 
                   className={cn(
-                    'gap-1.5 px-3.5 text-xs font-medium transition-all duration-200',
+                    'gap-1.5 px-4 text-xs font-medium transition-all duration-200',
                     'data-[state=active]:bg-background data-[state=active]:shadow-sm',
                     'data-[state=active]:text-primary'
                   )}
@@ -100,7 +90,7 @@ export default function AgentStudio() {
                 <TabsTrigger 
                   value="custom" 
                   className={cn(
-                    'gap-1.5 px-3.5 text-xs font-medium transition-all duration-200',
+                    'gap-1.5 px-4 text-xs font-medium transition-all duration-200',
                     'data-[state=active]:bg-background data-[state=active]:shadow-sm',
                     'data-[state=active]:text-primary'
                   )}
@@ -111,7 +101,7 @@ export default function AgentStudio() {
                 <TabsTrigger 
                   value="deploy" 
                   className={cn(
-                    'gap-1.5 px-3.5 text-xs font-medium transition-all duration-200',
+                    'gap-1.5 px-4 text-xs font-medium transition-all duration-200',
                     'data-[state=active]:bg-background data-[state=active]:shadow-sm',
                     'data-[state=active]:text-primary'
                   )}
@@ -122,20 +112,20 @@ export default function AgentStudio() {
               </TabsList>
             </Tabs>
 
-            <div className="h-6 w-px bg-border" />
+            <div className="h-5 w-px bg-border" />
             <OperatorEngineerToggle />
           </div>
         </div>
       </div>
 
-      {/* Full-bleed tab content */}
+      {/* Content — 2-panel layout */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'staff' && (
           <div className="h-full flex">
-            {/* Left Rail — proportional width */}
+            {/* Left Sidebar — compact staff list */}
             <div className={cn(
               'shrink-0 border-r border-border',
-              'w-[280px] xl:w-[320px] 2xl:w-[360px]'
+              'w-[260px] xl:w-[280px] 2xl:w-[300px]'
             )}>
               <StaffList
                 staff={staff}
@@ -145,7 +135,7 @@ export default function AgentStudio() {
               />
             </div>
 
-            {/* Center — flexible, fills remaining space */}
+            {/* Main Content — full remaining space */}
             <div className="flex-1 min-w-0 bg-background overflow-auto">
               {selectedMember && selectedConfig ? (
                 <ConfigEditor
@@ -172,30 +162,9 @@ export default function AgentStudio() {
                       {isOperator ? 'Select a team member' : 'Select staff_id'}
                     </p>
                     <p className="text-xs text-muted-foreground/60 mt-1">
-                      Choose from the list on the left
+                      Choose from the sidebar
                     </p>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Rail — proportional width */}
-            <div className={cn(
-              'shrink-0 border-l border-border',
-              'w-[320px] xl:w-[360px] 2xl:w-[400px]'
-            )}>
-              {selectedMember && selectedConfig ? (
-                <EffectiveConfig
-                  member={selectedMember}
-                  config={selectedConfig}
-                  toolCatalog={toolCatalog}
-                  skillpack={skillpack || null}
-                />
-              ) : (
-                <div className="h-full bg-surface-1 flex items-center justify-center">
-                  <p className="text-xs text-muted-foreground/50">
-                    {isOperator ? 'Live preview' : 'effective_config'}
-                  </p>
                 </div>
               )}
             </div>

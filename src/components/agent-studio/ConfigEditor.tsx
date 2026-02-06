@@ -6,9 +6,10 @@ import type {
   StaffRuntimeConfig, 
   ToolCatalogEntry,
   ProviderDef,
-  SkillpackRef 
+  SkillpackRef,
+  RiskLevel
 } from '@/contracts/ecosystem';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,14 @@ import {
   Mail,
   MessageSquare,
   Cpu,
-  Radio
+  Radio,
+  Receipt,
+  Inbox,
+  CheckCircle,
+  Zap,
+  Server,
+  FileCheck,
+  TrendingUp
 } from 'lucide-react';
 
 interface ConfigEditorProps {
@@ -72,6 +80,22 @@ const rolloutLabels = {
   deprecated: { operator: 'Retired', engineer: 'deprecated' },
 };
 
+const riskColors: Record<RiskLevel, string> = {
+  low: 'bg-success/20 text-success border-success/30',
+  medium: 'bg-warning/20 text-warning border-warning/30',
+  high: 'bg-destructive/20 text-destructive border-destructive/30',
+  critical: 'bg-destructive/30 text-destructive border-destructive/40',
+};
+
+const PIPELINE_STEPS = [
+  { id: 'request', label: 'Request', icon: Inbox, color: 'from-blue-500 to-blue-600' },
+  { id: 'policy', label: 'Policy', icon: Shield, color: 'from-purple-500 to-purple-600' },
+  { id: 'queue', label: 'Queue', icon: CheckCircle, color: 'from-cyan-500 to-cyan-600' },
+  { id: 'outbox', label: 'Outbox', icon: Zap, color: 'from-amber-500 to-amber-600' },
+  { id: 'provider', label: 'Provider', icon: Server, color: 'from-green-500 to-green-600' },
+  { id: 'receipts', label: 'Receipts', icon: Receipt, color: 'from-emerald-500 to-emerald-600' },
+];
+
 export function ConfigEditor({ 
   member, 
   config, 
@@ -85,7 +109,7 @@ export function ConfigEditor({
   const ChannelIcon = channelIcons[member.channel] || Radio;
   
   const [sectionsOpen, setSectionsOpen] = useState({
-    status: true,
+    pipeline: true,
     thresholds: true,
     approval: true,
     tools: true,
@@ -97,26 +121,43 @@ export function ConfigEditor({
     setSectionsOpen(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Compute effective tools for the summary
+  const effectiveTools = toolCatalog.filter(tool => 
+    config.tool_policy.allowlist.includes(tool.name) ||
+    config.tool_policy.allowlist.includes('*')
+  );
+
+  const riskSummary = effectiveTools.reduce(
+    (acc, tool) => {
+      acc[tool.risk] = (acc[tool.risk] || 0) + 1;
+      return acc;
+    },
+    { low: 0, medium: 0, high: 0, critical: 0 } as Record<RiskLevel, number>
+  );
+
+  const highRiskCount = riskSummary.high + riskSummary.critical;
+  const approvalCount = config.approval_rules.filter(r => r.requires_approval).length;
+  const connectedProviders = config.provider_bindings.filter(b => b.connection_status === 'connected').length;
+  const receiptsCount = effectiveTools.filter(t => t.receipted).length;
+
   const SectionCard = ({ 
     id, 
     icon: Icon, 
     title, 
     description,
     children,
-    defaultOpen = true
   }: { 
     id: keyof typeof sectionsOpen;
     icon: React.ComponentType<{ className?: string }>;
     title: string;
     description?: string;
     children: React.ReactNode;
-    defaultOpen?: boolean;
   }) => (
-    <Collapsible open={sectionsOpen[id]} defaultOpen={defaultOpen}>
+    <Collapsible open={sectionsOpen[id]}>
       <Card className={cn(
         'border-border bg-card overflow-hidden',
         'hover:border-primary/20 transition-colors duration-200',
-        'shadow-sm hover:shadow-md'
+        'shadow-sm'
       )}>
         <CollapsibleTrigger 
           className="w-full"
@@ -124,20 +165,20 @@ export function ConfigEditor({
         >
           <div className={cn(
             'flex items-center justify-between p-4',
-            'bg-gradient-to-r from-surface-2/80 to-transparent',
+            'bg-gradient-to-r from-surface-2/60 to-transparent',
             'hover:from-surface-2 transition-colors'
           )}>
             <div className="flex items-center gap-3">
               <div className={cn(
-                'h-9 w-9 rounded-lg flex items-center justify-center',
-                'bg-primary/10 shadow-[0_0_15px_hsl(var(--primary)/0.1)]'
+                'h-8 w-8 rounded-lg flex items-center justify-center',
+                'bg-primary/10'
               )}>
                 <Icon className="h-4 w-4 text-primary" />
               </div>
               <div className="text-left">
                 <span className="font-medium text-sm text-foreground">{title}</span>
                 {description && (
-                  <p className="text-xs text-muted-foreground">{description}</p>
+                  <p className="text-[11px] text-muted-foreground">{description}</p>
                 )}
               </div>
             </div>
@@ -148,8 +189,8 @@ export function ConfigEditor({
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 pb-4 px-4">
-            <div className="pt-2 border-t border-border/50">
+          <CardContent className="pt-0 pb-5 px-5">
+            <div className="pt-3 border-t border-border/50">
               {children}
             </div>
           </CardContent>
@@ -160,19 +201,17 @@ export function ConfigEditor({
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-5 xl:p-6 2xl:p-8 space-y-4 max-w-4xl mx-auto">
-        {/* Premium Hero Header */}
+      <div className="max-w-5xl mx-auto p-6 xl:p-8 2xl:p-10 space-y-6">
+        {/* Hero Header — wide, breathing room */}
         <div className={cn(
-          'relative rounded-xl overflow-hidden',
+          'relative rounded-2xl overflow-hidden',
           'bg-gradient-to-br from-card via-card to-surface-2',
           'border border-border shadow-lg',
-          'p-5'
+          'p-6 xl:p-8'
         )}>
-          {/* Subtle glow effect */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3" />
           
-          <div className="relative flex items-start gap-5">
-            {/* Large Premium Avatar */}
+          <div className="relative flex items-start gap-6">
             <StaffAvatar
               staffId={member.staff_id}
               name={member.name}
@@ -181,8 +220,8 @@ export function ConfigEditor({
               showStatus
             />
             
-            <div className="flex-1 min-w-0 pt-1">
-              <h2 className="text-xl font-bold text-gradient tracking-tight">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold text-gradient tracking-tight">
                 {member.name}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
@@ -215,7 +254,7 @@ export function ConfigEditor({
             
             {/* Status Toggle */}
             <div className={cn(
-              'flex flex-col items-center gap-2 p-3 rounded-xl',
+              'flex flex-col items-center gap-2 p-4 rounded-xl',
               'bg-surface-1 border border-border'
             )}>
               <Switch
@@ -231,10 +270,104 @@ export function ConfigEditor({
               </span>
             </div>
           </div>
+
+          {/* Inline Stats Row */}
+          <div className="relative grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Wrench className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{effectiveTools.length}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  {isOperator ? 'Tools' : 'effective_tools'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                'h-10 w-10 rounded-lg flex items-center justify-center',
+                highRiskCount > 0 ? 'bg-warning/10' : 'bg-success/10'
+              )}>
+                <AlertCircle className={cn('h-5 w-5', highRiskCount > 0 ? 'text-warning' : 'text-success')} />
+              </div>
+              <div>
+                <p className={cn('text-xl font-bold', highRiskCount > 0 ? 'text-warning' : 'text-success')}>
+                  {highRiskCount}
+                </p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  {isOperator ? 'High Risk' : 'risk:high+'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{approvalCount}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  {isOperator ? 'Approvals' : 'approval_rules'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{receiptsCount}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                  {isOperator ? 'Proof Trail' : 'receipted'}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Configuration Sections */}
-        <div className="space-y-2.5">
+        {/* Trust Spine Pipeline — full width */}
+        <Card className="bg-card border-border overflow-hidden">
+          <CardHeader className="pb-2 pt-4 px-6 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardTitle className="text-xs font-semibold text-primary uppercase tracking-wider">
+              {isOperator ? 'Action Pipeline' : 'Trust Spine'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-6 pb-5">
+            <div className="relative pt-3">
+              <div className="absolute top-[23px] left-[24px] right-[24px] h-0.5 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20" />
+              <div 
+                className="absolute top-[23px] left-[24px] right-[24px] h-0.5 bg-gradient-to-r from-primary via-primary to-primary opacity-40"
+                style={{
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 3s linear infinite',
+                }}
+              />
+              <div className="relative flex items-start justify-between">
+                {PIPELINE_STEPS.map((step) => {
+                  const StepIcon = step.icon;
+                  return (
+                    <div key={step.id} className="flex flex-col items-center group">
+                      <div className={cn(
+                        'relative h-10 w-10 rounded-full flex items-center justify-center',
+                        'bg-gradient-to-br', step.color,
+                        'shadow-lg group-hover:scale-110 transition-transform duration-200',
+                        'ring-2 ring-background'
+                      )}>
+                        <StepIcon className="h-4 w-4 text-white drop-shadow" />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-2.5 font-medium">
+                        {step.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Configuration Sections — 2-column grid on wide screens */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {/* Thresholds */}
           {Object.keys(config.thresholds).length > 0 && (
             <SectionCard
@@ -243,21 +376,18 @@ export function ConfigEditor({
               title={isOperator ? 'Limits & Thresholds' : 'Thresholds'}
               description={isOperator ? 'Set limits for automatic actions' : 'Numeric policy thresholds'}
             >
-              <div className="space-y-3 mt-3">
+              <div className="space-y-3 mt-2">
                 {Object.entries(config.thresholds).map(([key, value]) => (
                   <div key={key} className={cn(
-                    'flex items-center justify-between gap-4 p-4 rounded-xl',
+                    'flex items-center justify-between gap-4 p-3.5 rounded-xl',
                     'bg-surface-1 border border-border/50',
-                    'hover:border-border transition-colors'
                   )}>
-                    <div className="flex-1">
-                      <Label className="text-sm font-medium">
-                        {isOperator 
-                          ? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                          : key
-                        }
-                      </Label>
-                    </div>
+                    <Label className="text-sm font-medium">
+                      {isOperator 
+                        ? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                        : key
+                      }
+                    </Label>
                     <div className="relative">
                       {key.includes('amount') && (
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -270,7 +400,7 @@ export function ConfigEditor({
                           thresholds: { ...config.thresholds, [key]: Number(e.target.value) }
                         })}
                         className={cn(
-                          'w-32 h-10 text-sm font-medium',
+                          'w-28 h-9 text-sm font-medium',
                           key.includes('amount') && 'pl-7'
                         )}
                       />
@@ -289,23 +419,23 @@ export function ConfigEditor({
             description={isOperator ? 'When you need to approve actions' : 'approval_rules[] configuration'}
           >
             {config.approval_rules.length === 0 ? (
-              <div className="p-6 rounded-xl bg-surface-1 text-center mt-3">
-                <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-3">
-                  <Shield className="h-5 w-5 text-success" />
+              <div className="p-5 rounded-xl bg-surface-1 text-center mt-2">
+                <div className="h-9 w-9 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-2">
+                  <Shield className="h-4 w-4 text-success" />
                 </div>
                 <p className="text-sm font-medium text-foreground">Fully Autonomous</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {isOperator ? 'All actions run automatically' : 'approval_rules: []'}
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 mt-3">
+              <div className="space-y-2 mt-2">
                 {config.approval_rules.map((rule, idx) => (
                   <div key={idx} className={cn(
-                    'p-4 rounded-xl border transition-colors',
-                    'bg-surface-1 border-border/50 hover:border-border'
+                    'p-3.5 rounded-xl border',
+                    'bg-surface-1 border-border/50'
                   )}>
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">
                         {isOperator 
                           ? rule.action_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -330,7 +460,7 @@ export function ConfigEditor({
                           onConfigChange({ ...config, approval_rules: newRules });
                         }}
                       >
-                        <SelectTrigger className="h-9 text-xs">
+                        <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -364,13 +494,13 @@ export function ConfigEditor({
             description={isOperator ? 'What this agent can do' : 'tool_policy.allowlist'}
           >
             {toolCatalog.length === 0 ? (
-              <div className="p-6 rounded-xl bg-surface-1 text-center mt-3">
+              <div className="p-5 rounded-xl bg-surface-1 text-center mt-2">
                 <p className="text-sm text-muted-foreground">
-                  {isOperator ? 'No tools configured for this agent' : 'No tool catalog found'}
+                  {isOperator ? 'No tools configured' : 'No tool catalog found'}
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 mt-3">
+              <div className="space-y-1.5 mt-2">
                 {toolCatalog.map((tool) => {
                   const isAllowed = config.tool_policy.allowlist.includes(tool.name) ||
                     config.tool_policy.allowlist.includes('*');
@@ -380,10 +510,10 @@ export function ConfigEditor({
                     <div 
                       key={tool.name}
                       className={cn(
-                        'flex items-center justify-between p-4 rounded-xl border transition-all duration-200',
+                        'flex items-center justify-between p-3 rounded-lg border transition-all duration-150',
                         isAllowed 
-                          ? 'bg-surface-1 border-border/50 hover:border-border' 
-                          : 'bg-surface-1/30 border-border/30 opacity-50'
+                          ? 'bg-surface-1 border-border/50' 
+                          : 'bg-surface-1/30 border-border/20 opacity-50'
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -407,7 +537,7 @@ export function ConfigEditor({
                               : tool.name
                             }
                           </p>
-                          <p className="text-xs text-muted-foreground">{tool.description}</p>
+                          <p className="text-[11px] text-muted-foreground">{tool.description}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -435,13 +565,13 @@ export function ConfigEditor({
             description={isOperator ? 'External services this agent uses' : 'provider_bindings[]'}
           >
             {config.provider_bindings.length === 0 ? (
-              <div className="p-6 rounded-xl bg-surface-1 text-center mt-3">
+              <div className="p-5 rounded-xl bg-surface-1 text-center mt-2">
                 <p className="text-sm text-muted-foreground">
                   {isOperator ? 'No services connected' : 'provider_bindings: []'}
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 mt-3">
+              <div className="space-y-2 mt-2">
                 {config.provider_bindings.map((binding) => {
                   const provider = providers.find(p => p.provider_id === binding.provider_id);
                   const isConnected = binding.connection_status === 'connected';
@@ -450,14 +580,13 @@ export function ConfigEditor({
                     <div 
                       key={binding.provider_id}
                       className={cn(
-                        'flex items-center justify-between p-4 rounded-xl',
+                        'flex items-center justify-between p-3.5 rounded-xl',
                         'bg-surface-1 border border-border/50',
-                        'hover:border-border transition-colors'
                       )}
                     >
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          'h-9 w-9 rounded-lg flex items-center justify-center',
+                          'h-8 w-8 rounded-lg flex items-center justify-center',
                           isConnected ? 'bg-success/10' : 'bg-muted'
                         )}>
                           <Link2 className={cn(
@@ -496,15 +625,44 @@ export function ConfigEditor({
               </div>
             )}
           </SectionCard>
+        </div>
 
-          {/* Rollout State */}
-          <SectionCard
-            id="rollout"
-            icon={Rocket}
-            title={isOperator ? 'Deployment Status' : 'Rollout State'}
-            description={isOperator ? 'Current deployment status' : 'rollout_state'}
-          >
-            <div className="mt-3 space-y-4">
+        {/* Rollout State — full width at bottom */}
+        <Card className={cn(
+          'border-border bg-card overflow-hidden',
+          'shadow-sm'
+        )}>
+          <div className="flex items-center justify-between p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Rocket className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <span className="font-medium text-sm text-foreground">
+                  {isOperator ? 'Deployment Status' : 'Rollout State'}
+                </span>
+                <p className="text-[11px] text-muted-foreground">
+                  {isOperator ? 'Current deployment status' : 'rollout_state'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                'px-4 py-2 rounded-lg text-xs',
+                config.rollout_state === 'active' && 'bg-success/10 text-success border border-success/20',
+                config.rollout_state === 'draft' && 'bg-muted text-muted-foreground border border-border',
+                config.rollout_state === 'proposed' && 'bg-warning/10 text-warning border border-warning/20',
+                config.rollout_state === 'paused' && 'bg-warning/10 text-warning border border-warning/20',
+                config.rollout_state === 'deprecated' && 'bg-destructive/10 text-destructive border border-destructive/20',
+              )}>
+                {config.rollout_state === 'active' && (isOperator ? '● This agent is live' : 'active — processing enabled')}
+                {config.rollout_state === 'draft' && (isOperator ? 'Save as draft' : 'draft — not processing')}
+                {config.rollout_state === 'proposed' && (isOperator ? 'Pending review' : 'proposed — pending approval')}
+                {config.rollout_state === 'paused' && (isOperator ? 'Temporarily paused' : 'paused — temporarily disabled')}
+                {config.rollout_state === 'deprecated' && (isOperator ? 'Retired' : 'deprecated — end of life')}
+              </div>
+              
               <Select
                 value={config.rollout_state}
                 onValueChange={(value) => onConfigChange({ 
@@ -512,52 +670,20 @@ export function ConfigEditor({
                   rollout_state: value as any 
                 })}
               >
-                <SelectTrigger className="w-full h-11">
+                <SelectTrigger className="w-36 h-9 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(rolloutLabels).map(([key, labels]) => (
-                    <SelectItem key={key} value={key}>
+                    <SelectItem key={key} value={key} className="text-xs">
                       {isOperator ? labels.operator : labels.engineer}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
-              <div className={cn(
-                'p-4 rounded-xl',
-                config.rollout_state === 'active' && 'bg-success/10 border border-success/20',
-                config.rollout_state === 'draft' && 'bg-muted border border-border',
-                config.rollout_state === 'proposed' && 'bg-warning/10 border border-warning/20',
-                config.rollout_state === 'paused' && 'bg-warning/10 border border-warning/20',
-                config.rollout_state === 'deprecated' && 'bg-destructive/10 border border-destructive/20',
-              )}>
-                <p className="text-xs text-muted-foreground">
-                  {config.rollout_state === 'active' && (isOperator 
-                    ? 'This agent is live and handling requests'
-                    : 'rollout_state: active — processing enabled'
-                  )}
-                  {config.rollout_state === 'draft' && (isOperator 
-                    ? 'Save as draft before going live'
-                    : 'rollout_state: draft — not processing'
-                  )}
-                  {config.rollout_state === 'proposed' && (isOperator 
-                    ? 'Waiting for review before activation'
-                    : 'rollout_state: proposed — pending approval'
-                  )}
-                  {config.rollout_state === 'paused' && (isOperator 
-                    ? 'Temporarily paused — can be resumed'
-                    : 'rollout_state: paused — temporarily disabled'
-                  )}
-                  {config.rollout_state === 'deprecated' && (isOperator 
-                    ? 'This agent has been retired'
-                    : 'rollout_state: deprecated — end of life'
-                  )}
-                </p>
-              </div>
             </div>
-          </SectionCard>
-        </div>
+          </div>
+        </Card>
       </div>
     </ScrollArea>
   );
