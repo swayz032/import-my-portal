@@ -160,13 +160,13 @@ export function ConfigEditor({
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-6 space-y-5 max-w-3xl mx-auto">
+      <div className="p-5 xl:p-6 2xl:p-8 space-y-4 max-w-4xl mx-auto">
         {/* Premium Hero Header */}
         <div className={cn(
-          'relative rounded-2xl overflow-hidden',
+          'relative rounded-xl overflow-hidden',
           'bg-gradient-to-br from-card via-card to-surface-2',
           'border border-border shadow-lg',
-          'p-6'
+          'p-5'
         )}>
           {/* Subtle glow effect */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -182,7 +182,7 @@ export function ConfigEditor({
             />
             
             <div className="flex-1 min-w-0 pt-1">
-              <h2 className="text-2xl font-bold text-gradient tracking-tight">
+              <h2 className="text-xl font-bold text-gradient tracking-tight">
                 {member.name}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
@@ -234,7 +234,7 @@ export function ConfigEditor({
         </div>
 
         {/* Configuration Sections */}
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {/* Thresholds */}
           {Object.keys(config.thresholds).length > 0 && (
             <SectionCard
