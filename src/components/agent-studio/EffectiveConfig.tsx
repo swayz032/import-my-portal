@@ -82,17 +82,17 @@ export function EffectiveConfig({
   return (
     <div className="h-full flex flex-col bg-surface-1">
       {/* Header */}
-      <div className="p-4 border-b border-border bg-gradient-to-r from-surface-2/80 to-transparent">
-        <h2 className="text-sm font-semibold text-foreground">
+      <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-surface-2/80 to-transparent">
+        <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">
           {isOperator ? 'Effective Configuration' : 'Runtime Preview'}
         </h2>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-[10px] text-muted-foreground mt-0.5">
           {isOperator ? 'What this agent will do' : 'Computed effective_config'}
         </p>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-3 xl:p-4 space-y-3">
           {/* Premium Trust Spine Pipeline */}
           <Card className="bg-card border-border overflow-hidden">
             <CardHeader className="pb-2 pt-3 px-4 bg-gradient-to-r from-primary/5 to-transparent">
