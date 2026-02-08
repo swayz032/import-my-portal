@@ -6,6 +6,7 @@ import sarahAvatar from '@/assets/staff/sarah.png';
 import eliAvatar from '@/assets/staff/eli.png';
 import quinnAvatar from '@/assets/staff/quinn.png';
 import noraAvatar from '@/assets/staff/nora.png';
+import claraAvatar from '@/assets/staff/clara.png';
 
 type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
 type AvatarStatus = 'active' | 'draft' | 'paused' | 'deprecated' | 'proposed';
@@ -13,7 +14,6 @@ type AvatarStatus = 'active' | 'draft' | 'paused' | 'deprecated' | 'proposed';
 interface StaffAvatarProps {
   staffId: string;
   name: string;
-  fallbackEmoji?: string;
   size?: AvatarSize;
   status?: AvatarStatus;
   showStatus?: boolean;
@@ -26,9 +26,10 @@ const staffAvatars: Record<string, string> = {
   eli: eliAvatar,
   quinn: quinnAvatar,
   nora: noraAvatar,
+  clara: claraAvatar,
 };
 
-// Professional gradient backgrounds for staff without photos
+// Gradient backgrounds for staff without photos
 const staffGradients: Record<string, string> = {
   adam: 'bg-gradient-to-br from-violet-500 to-purple-600',
   tec: 'bg-gradient-to-br from-emerald-500 to-teal-600',
@@ -64,7 +65,6 @@ function getInitials(name: string): string {
 export function StaffAvatar({
   staffId,
   name,
-  fallbackEmoji,
   size = 'md',
   status,
   showStatus = false,
@@ -76,94 +76,12 @@ export function StaffAvatar({
   const initials = getInitials(name);
 
   return (
-    <div className={cn('relative group', className)}>
-      {/* Outer glow ring */}
-      <div
-        className={cn(
-          'absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300',
-          'bg-gradient-to-r from-primary/60 via-primary/40 to-primary/60',
-          'blur-md scale-110'
-        )}
-      />
-      
-      {/* Premium ring border */}
-      <div
-        className={cn(
-          'relative rounded-full p-[2px]',
-          'bg-gradient-to-br from-primary/60 via-primary/30 to-primary/60',
-          'shadow-[0_0_20px_hsl(var(--primary)/0.2)]',
-          'group-hover:shadow-[0_0_30px_hsl(var(--primary)/0.3)]',
-          'transition-all duration-300'
-        )}
-      >
-        {/* Avatar container */}
-        <div
-          className={cn(
-            sizeConfig.container,
-            'relative rounded-full overflow-hidden',
-            'bg-surface-2 border border-border/50',
-            'group-hover:scale-[1.02] transition-transform duration-300'
-          )}
-        >
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            // Premium fallback with gradient and initials
-            <div
-              className={cn(
-                'h-full w-full flex items-center justify-center',
-                gradient
-              )}
-            >
-              <span className={cn(sizeConfig.text, 'text-white drop-shadow-sm')}>
-                {initials}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Status indicator */}
-      {showStatus && status && (
-        <div
-          className={cn(
-            'absolute rounded-full border-2 border-background',
-            sizeConfig.status,
-            statusColors[status],
-            'animate-pulse'
-          )}
-          style={{ animationDuration: '3s' }}
-        />
-      )}
-    </div>
-  );
-}
-
-// Compact version for lists
-export function StaffAvatarCompact({
-  staffId,
-  name,
-  size = 'sm',
-  status,
-  className,
-}: Omit<StaffAvatarProps, 'showStatus' | 'fallbackEmoji'>) {
-  const avatarUrl = staffAvatars[staffId];
-  const sizeConfig = sizeClasses[size];
-  const gradient = staffGradients[staffId] || staffGradients.default;
-  const initials = getInitials(name);
-
-  return (
     <div className={cn('relative', className)}>
       <div
         className={cn(
           sizeConfig.container,
           'relative rounded-full overflow-hidden',
-          'ring-2 ring-primary/20 ring-offset-2 ring-offset-background',
-          'hover:ring-primary/40 transition-all duration-200'
+          'bg-surface-2',
         )}
       >
         {avatarUrl ? (
@@ -179,19 +97,19 @@ export function StaffAvatarCompact({
               gradient
             )}
           >
-            <span className={cn(sizeConfig.text, 'text-white drop-shadow-sm')}>
+            <span className={cn(sizeConfig.text, 'text-white')}>
               {initials}
             </span>
           </div>
         )}
       </div>
 
-      {status && (
+      {showStatus && status && (
         <div
           className={cn(
             'absolute rounded-full border-2 border-background',
             sizeConfig.status,
-            statusColors[status]
+            statusColors[status],
           )}
         />
       )}
