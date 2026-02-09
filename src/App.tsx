@@ -40,6 +40,7 @@ import SkillPackAnalytics from "./pages/skillpacks/Analytics";
 
 // Control Plane pages
 import AgentStudio from "./pages/AgentStudio";
+import CreateAgent from "./pages/control-plane/Builder";
 
 const queryClient = new QueryClient();
 
@@ -282,10 +283,21 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              {/* Create Agent */}
+              <Route
+                path="/agent-studio/create"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <CreateAgent />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
               {/* Legacy Control Plane Routes (redirect to Agent Studio) */}
               <Route path="/staff-config" element={<Navigate to="/agent-studio" replace />} />
               <Route path="/control-plane/registry" element={<Navigate to="/agent-studio" replace />} />
-              <Route path="/control-plane/builder" element={<Navigate to="/agent-studio?tab=custom" replace />} />
+              <Route path="/control-plane/builder" element={<Navigate to="/agent-studio/create" replace />} />
               <Route path="/control-plane/rollouts" element={<Navigate to="/agent-studio?tab=deploy" replace />} />
               
               <Route path="*" element={<NotFound />} />

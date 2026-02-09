@@ -8,7 +8,6 @@ import {
   AGENT_TEMPLATES,
   RiskTier,
   RequiredPresence,
-  RegistryCapability,
 } from '@/contracts/control-plane';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,20 +28,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  Check,
-  ChevronDown,
-  Info,
-  Shield,
-  AlertTriangle,
-  X,
-  Plus,
-} from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Check, ChevronDown, X, Plus } from 'lucide-react';
 
 interface StepProps {
   state: BuilderState;
@@ -55,15 +41,13 @@ interface StepProps {
 
 export function IdentityStep({ state, onChange }: StepProps) {
   const { viewMode } = useSystem();
+  const isOperator = viewMode === 'operator';
   const [showNotes, setShowNotes] = useState(false);
 
   const handleTemplateChange = (templateId: string) => {
     const template = AGENT_TEMPLATES.find(t => t.id === templateId);
     if (template) {
-      onChange({
-        template: templateId,
-        ...template.defaults,
-      });
+      onChange({ template: templateId, ...template.defaults });
     } else {
       onChange({ template: templateId });
     }
@@ -72,36 +56,35 @@ export function IdentityStep({ state, onChange }: StepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-1">
-          {viewMode === 'operator' ? 'Name Your Agent' : 'Identity Configuration'}
+        <h2 className="text-lg font-semibold text-foreground mb-1">
+          {isOperator ? 'Name Your Agent' : 'Identity Configuration'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {viewMode === 'operator' 
-            ? 'Give your agent a clear name and description so your team knows what it does.'
+          {isOperator 
+            ? 'Give your agent a clear name and description.'
             : 'Configure registry item identity and metadata.'}
         </p>
       </div>
 
       {/* Template Selector */}
       <div className="space-y-2">
-        <Label>
-          {viewMode === 'operator' ? 'Start from a template' : 'Template'}
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'Start from a template' : 'Template'}
         </Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           {AGENT_TEMPLATES.map(template => (
             <button
               key={template.id}
               onClick={() => handleTemplateChange(template.id)}
               className={cn(
-                'p-4 rounded-lg border text-left transition-all',
-                'hover:border-primary/50 hover:bg-accent/30',
+                'p-3 rounded-lg border text-left transition-all',
                 state.template === template.id 
-                  ? 'border-primary bg-accent/50' 
-                  : 'border-border'
+                  ? 'border-primary/50 bg-primary/5' 
+                  : 'border-border hover:border-border/80 hover:bg-accent/20'
               )}
             >
-              <div className="font-medium text-sm">{template.name}</div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-sm font-medium text-foreground">{template.name}</div>
+              <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                 {template.description}
               </div>
             </button>
@@ -110,43 +93,35 @@ export function IdentityStep({ state, onChange }: StepProps) {
       </div>
 
       {/* Name */}
-      <div className="space-y-2">
-        <Label htmlFor="name">
-          {viewMode === 'operator' ? 'Agent Name' : 'Name'} *
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'Agent Name' : 'Name'} *
         </Label>
         <Input
-          id="name"
           value={state.name}
           onChange={e => onChange({ name: e.target.value })}
-          placeholder={viewMode === 'operator' ? 'e.g., Invoice Processor' : 'registry_item_name'}
-          className="text-base"
+          placeholder={isOperator ? 'e.g., Invoice Processor' : 'registry_item_name'}
         />
-        {viewMode === 'operator' && (
-          <p className="text-xs text-muted-foreground">
-            Choose a clear, descriptive name that tells your team what this agent does.
-          </p>
-        )}
       </div>
 
       {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description">
-          {viewMode === 'operator' ? 'What does it do?' : 'Description'} *
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'What does it do?' : 'Description'} *
         </Label>
         <Textarea
-          id="description"
           value={state.description}
           onChange={e => onChange({ description: e.target.value })}
-          placeholder={viewMode === 'operator' 
-            ? 'Describe what this agent does in a sentence or two...'
+          placeholder={isOperator 
+            ? 'Describe what this agent does...'
             : 'Brief description of agent functionality'}
           rows={3}
         />
       </div>
 
       {/* Category */}
-      <div className="space-y-2">
-        <Label>Category</Label>
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Category</Label>
         <Select value={state.category} onValueChange={v => onChange({ category: v })}>
           <SelectTrigger>
             <SelectValue placeholder="Select a category" />
@@ -163,15 +138,13 @@ export function IdentityStep({ state, onChange }: StepProps) {
       </div>
 
       {/* Internal Toggle */}
-      <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-surface-2">
+      <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-accent/30">
         <div>
-          <div className="font-medium text-sm">
-            {viewMode === 'operator' ? 'Internal only' : 'Internal Flag'}
+          <div className="text-sm font-medium text-foreground">
+            {isOperator ? 'Internal only' : 'Internal Flag'}
           </div>
           <div className="text-xs text-muted-foreground">
-            {viewMode === 'operator' 
-              ? 'Only visible to your team, not external users'
-              : 'internal: true restricts visibility'}
+            {isOperator ? 'Only visible to your team' : 'internal: true restricts visibility'}
           </div>
         </div>
         <Switch
@@ -180,13 +153,13 @@ export function IdentityStep({ state, onChange }: StepProps) {
         />
       </div>
 
-      {/* Notes (Collapsible) */}
+      {/* Notes */}
       <Collapsible open={showNotes} onOpenChange={setShowNotes}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ChevronDown className={cn('h-4 w-4 transition-transform', showNotes && 'rotate-180')} />
-            {viewMode === 'operator' ? 'Add internal notes' : 'Internal Notes'}
-          </Button>
+          <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showNotes && 'rotate-180')} />
+            {isOperator ? 'Add internal notes' : 'Internal Notes'}
+          </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-3">
           <Textarea
@@ -207,15 +180,14 @@ export function IdentityStep({ state, onChange }: StepProps) {
 
 export function CapabilitiesStep({ state, onChange }: StepProps) {
   const { viewMode } = useSystem();
+  const isOperator = viewMode === 'operator';
   const [toolSearch, setToolSearch] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string | null>('communication');
 
   const capabilities = state.capabilities.length > 0 ? state.capabilities : DEFAULT_CAPABILITIES;
 
   const handleCapabilityToggle = (capId: string, enabled: boolean) => {
-    const updated = capabilities.map(c => 
-      c.id === capId ? { ...c, enabled } : c
-    );
+    const updated = capabilities.map(c => c.id === capId ? { ...c, enabled } : c);
     onChange({ capabilities: updated });
   };
 
@@ -238,39 +210,33 @@ export function CapabilitiesStep({ state, onChange }: StepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-1">
-          {viewMode === 'operator' ? 'What Can It Do?' : 'Capabilities & Tools'}
+        <h2 className="text-lg font-semibold text-foreground mb-1">
+          {isOperator ? 'What Can It Do?' : 'Capabilities & Tools'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {viewMode === 'operator' 
+          {isOperator 
             ? 'Choose what actions this agent is allowed to perform.'
             : 'Configure capability flags and tool allowlist.'}
         </p>
       </div>
 
       {/* Capability Cards */}
-      <div className="space-y-3">
-        <Label>{viewMode === 'operator' ? 'Core Capabilities' : 'Capability Flags'}</Label>
-        <div className="grid gap-3">
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'Core Capabilities' : 'Capability Flags'}
+        </Label>
+        <div className="space-y-2">
           {capabilities.map(cap => (
             <div
               key={cap.id}
               className={cn(
-                'flex items-center justify-between p-4 rounded-lg border transition-all',
-                cap.enabled ? 'border-primary bg-primary/5' : 'border-border'
+                'flex items-center justify-between p-3.5 rounded-lg border transition-all',
+                cap.enabled ? 'border-primary/30 bg-primary/5' : 'border-border'
               )}
             >
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  'w-8 h-8 rounded-lg flex items-center justify-center',
-                  cap.enabled ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
-                )}>
-                  <Check className={cn('h-4 w-4', !cap.enabled && 'opacity-0')} />
-                </div>
-                <div>
-                  <div className="font-medium text-sm">{cap.name}</div>
-                  <div className="text-xs text-muted-foreground">{cap.description}</div>
-                </div>
+              <div>
+                <div className="text-sm font-medium text-foreground">{cap.name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{cap.description}</div>
               </div>
               <Switch
                 checked={cap.enabled}
@@ -282,9 +248,11 @@ export function CapabilitiesStep({ state, onChange }: StepProps) {
       </div>
 
       {/* Tool Allowlist */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>{viewMode === 'operator' ? 'Allowed Tools' : 'Tool Allowlist'}</Label>
+          <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+            {isOperator ? 'Allowed Tools' : 'Tool Allowlist'}
+          </Label>
           <span className="text-xs text-muted-foreground">
             {state.tool_allowlist.length} selected
           </span>
@@ -294,10 +262,9 @@ export function CapabilitiesStep({ state, onChange }: StepProps) {
           placeholder="Search tools..."
           value={toolSearch}
           onChange={e => setToolSearch(e.target.value)}
-          className="mb-3"
         />
 
-        <div className="space-y-2 max-h-80 overflow-y-auto">
+        <div className="space-y-1.5 max-h-72 overflow-y-auto">
           {toolCategories.map(category => {
             const categoryTools = filteredTools.filter(t => t.category === category);
             if (categoryTools.length === 0) return null;
@@ -308,46 +275,40 @@ export function CapabilitiesStep({ state, onChange }: StepProps) {
                 open={expandedCategory === category}
                 onOpenChange={() => setExpandedCategory(expandedCategory === category ? null : category)}
               >
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-surface-2 hover:bg-surface-3 transition-colors">
-                  <span className="font-medium text-sm capitalize">{category}</span>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2.5 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors">
+                  <span className="text-sm font-medium text-foreground capitalize">{category}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
                       {categoryTools.filter(t => state.tool_allowlist.includes(t.id)).length}/{categoryTools.length}
                     </span>
                     <ChevronDown className={cn(
-                      'h-4 w-4 transition-transform',
+                      'h-3.5 w-3.5 text-muted-foreground transition-transform',
                       expandedCategory === category && 'rotate-180'
                     )} />
                   </div>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2 pl-3 space-y-1">
+                <CollapsibleContent className="pt-1 pl-2 space-y-0.5">
                   {categoryTools.map(tool => (
                     <label
                       key={tool.id}
-                      className={cn(
-                        'flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors',
-                        'hover:bg-accent/50',
-                        state.tool_allowlist.includes(tool.id) && 'bg-accent/30'
-                      )}
+                      className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-accent/20 transition-colors"
                     >
                       <Checkbox
                         checked={state.tool_allowlist.includes(tool.id)}
                         onCheckedChange={() => handleToolToggle(tool.id)}
                       />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{tool.name}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-foreground">{tool.name}</div>
                         <div className="text-xs text-muted-foreground">{tool.description}</div>
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          'text-xs',
-                          tool.risk_level === 'high' && 'border-destructive text-destructive',
-                          tool.risk_level === 'medium' && 'border-warning text-warning'
-                        )}
-                      >
+                      <span className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded font-medium',
+                        tool.risk_level === 'high' && 'bg-destructive/10 text-destructive',
+                        tool.risk_level === 'medium' && 'bg-warning/10 text-warning',
+                        tool.risk_level === 'low' && 'bg-success/10 text-success',
+                      )}>
                         {tool.risk_level}
-                      </Badge>
+                      </span>
                     </label>
                   ))}
                 </CollapsibleContent>
@@ -366,29 +327,30 @@ export function CapabilitiesStep({ state, onChange }: StepProps) {
 
 export function GovernanceStep({ state, onChange }: StepProps) {
   const { viewMode } = useSystem();
+  const isOperator = viewMode === 'operator';
   const [newConstraint, setNewConstraint] = useState('');
 
   const riskOptions: { value: RiskTier; label: string; description: string }[] = [
     { 
       value: 'low', 
-      label: viewMode === 'operator' ? 'Low Risk' : 'Low',
-      description: viewMode === 'operator' 
+      label: isOperator ? 'Low Risk' : 'Low',
+      description: isOperator 
         ? 'Can run automatically with minimal oversight'
-        : 'Minimal approval requirements, automated execution'
+        : 'Minimal approval requirements'
     },
     { 
       value: 'medium', 
-      label: viewMode === 'operator' ? 'Medium Risk' : 'Medium',
-      description: viewMode === 'operator'
+      label: isOperator ? 'Medium Risk' : 'Medium',
+      description: isOperator
         ? 'Requires periodic review and monitoring'
-        : 'Standard approval workflow, logged actions'
+        : 'Standard approval workflow'
     },
     { 
       value: 'high', 
-      label: viewMode === 'operator' ? 'High Risk' : 'High',
-      description: viewMode === 'operator'
+      label: isOperator ? 'High Risk' : 'High',
+      description: isOperator
         ? 'Requires approval for most actions'
-        : 'Strict approval requirements, full audit trail'
+        : 'Strict approval requirements'
     },
   ];
 
@@ -406,43 +368,41 @@ export function GovernanceStep({ state, onChange }: StepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-1">
-          {viewMode === 'operator' ? 'Safety & Controls' : 'Governance Configuration'}
+        <h2 className="text-lg font-semibold text-foreground mb-1">
+          {isOperator ? 'Safety & Controls' : 'Governance Configuration'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {viewMode === 'operator' 
-            ? 'Set safety rules and approval requirements for this agent.'
+          {isOperator 
+            ? 'Set safety rules and approval requirements.'
             : 'Configure risk tier, approval policies, and constraints.'}
         </p>
       </div>
 
       {/* Risk Tier */}
-      <div className="space-y-3">
-        <Label className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          {viewMode === 'operator' ? 'Safety Level' : 'Risk Tier'}
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'Safety Level' : 'Risk Tier'}
         </Label>
-        <div className="grid gap-3">
+        <div className="space-y-2">
           {riskOptions.map(option => (
             <button
               key={option.value}
               onClick={() => onChange({ risk_tier: option.value })}
               className={cn(
-                'flex items-center gap-4 p-4 rounded-lg border text-left transition-all',
-                'hover:border-primary/50',
+                'flex items-center gap-3 w-full p-3.5 rounded-lg border text-left transition-all',
                 state.risk_tier === option.value 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border'
+                  ? 'border-primary/30 bg-primary/5' 
+                  : 'border-border hover:border-border/80'
               )}
             >
               <div className={cn(
-                'w-3 h-3 rounded-full',
+                'w-2 h-2 rounded-full shrink-0',
                 option.value === 'low' && 'bg-success',
                 option.value === 'medium' && 'bg-warning',
                 option.value === 'high' && 'bg-destructive'
               )} />
               <div>
-                <div className="font-medium">{option.label}</div>
+                <div className="text-sm font-medium text-foreground">{option.label}</div>
                 <div className="text-xs text-muted-foreground">{option.description}</div>
               </div>
             </button>
@@ -451,15 +411,14 @@ export function GovernanceStep({ state, onChange }: StepProps) {
       </div>
 
       {/* Approval Required */}
-      <div className="flex items-center justify-between p-4 rounded-lg bg-surface-2">
+      <div className="flex items-center justify-between p-3.5 rounded-lg bg-accent/30">
         <div>
-          <div className="font-medium text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-warning" />
-            {viewMode === 'operator' ? 'Require my approval' : 'Approval Required'}
+          <div className="text-sm font-medium text-foreground">
+            {isOperator ? 'Require my approval' : 'Approval Required'}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {viewMode === 'operator' 
-              ? 'I must approve actions before they run'
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {isOperator 
+              ? 'Actions must be approved before they run'
               : 'approval_required: true adds to Authority Queue'}
           </div>
         </div>
@@ -469,20 +428,10 @@ export function GovernanceStep({ state, onChange }: StepProps) {
         />
       </div>
 
-      {/* Required Presence (Display Only) */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          {viewMode === 'operator' ? 'Presence Required' : 'Required Presence'}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent>
-              {viewMode === 'operator'
-                ? 'Whether an operator needs to be available when this agent runs'
-                : 'required_presence field for operator availability requirements'}
-            </TooltipContent>
-          </Tooltip>
+      {/* Required Presence */}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'Presence Required' : 'Required Presence'}
         </Label>
         <Select 
           value={state.required_presence} 
@@ -492,66 +441,50 @@ export function GovernanceStep({ state, onChange }: StepProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">
-              {viewMode === 'operator' ? 'No presence required' : 'none'}
-            </SelectItem>
-            <SelectItem value="voice">
-              {viewMode === 'operator' ? 'Voice available' : 'voice'}
-            </SelectItem>
-            <SelectItem value="video">
-              {viewMode === 'operator' ? 'Video available' : 'video'}
-            </SelectItem>
+            <SelectItem value="none">{isOperator ? 'No presence required' : 'none'}</SelectItem>
+            <SelectItem value="voice">{isOperator ? 'Voice available' : 'voice'}</SelectItem>
+            <SelectItem value="video">{isOperator ? 'Video available' : 'video'}</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          {viewMode === 'operator'
-            ? 'This is informational only - no sessions will be started automatically.'
-            : 'Display-only field. No session flows implemented.'}
-        </p>
       </div>
 
       {/* Constraints */}
-      <div className="space-y-3">
-        <Label>{viewMode === 'operator' ? 'Rules & Limits' : 'Constraints'}</Label>
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+          {isOperator ? 'Rules & Limits' : 'Constraints'}
+        </Label>
         
         <div className="flex gap-2">
           <Input
             value={newConstraint}
             onChange={e => setNewConstraint(e.target.value)}
-            placeholder={viewMode === 'operator' 
+            placeholder={isOperator 
               ? 'Add a rule, e.g., "Cannot send more than 10 emails per hour"'
               : 'Add constraint...'}
             onKeyDown={e => e.key === 'Enter' && addConstraint()}
           />
-          <Button onClick={addConstraint} size="icon" variant="outline">
+          <Button onClick={addConstraint} size="icon" variant="outline" className="shrink-0">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
         
         {state.constraints.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {state.constraints.map((constraint, index) => (
-              <div 
-                key={index}
-                className="flex items-center justify-between p-3 rounded-lg bg-surface-2"
-              >
-                <span className="text-sm">{constraint}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              <div key={index} className="flex items-center justify-between p-2.5 rounded-lg bg-accent/30">
+                <span className="text-sm text-foreground">{constraint}</span>
+                <button
+                  className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
                   onClick={() => removeConstraint(index)}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground italic">
-            {viewMode === 'operator'
-              ? 'No rules added yet. Rules help keep your agent safe and predictable.'
-              : 'No constraints defined.'}
+          <p className="text-sm text-muted-foreground">
+            {isOperator ? 'No rules added yet.' : 'No constraints defined.'}
           </p>
         )}
       </div>
@@ -565,47 +498,40 @@ export function GovernanceStep({ state, onChange }: StepProps) {
 
 export function PromptStep({ state, onChange }: StepProps) {
   const { viewMode } = useSystem();
+  const isOperator = viewMode === 'operator';
   const [showVariables, setShowVariables] = useState(false);
-
   const charCount = state.prompt_content.length;
   const maxChars = 10000;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-1">
-          {viewMode === 'operator' ? 'Instructions' : 'Prompt & Config'}
+        <h2 className="text-lg font-semibold text-foreground mb-1">
+          {isOperator ? 'Instructions' : 'Prompt & Config'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {viewMode === 'operator' 
+          {isOperator 
             ? 'Tell your agent how to behave and what to do.'
             : 'Configure versioned prompt and config variables.'}
         </p>
       </div>
 
       {/* Version */}
-      <div className="flex items-center gap-4">
-        <div className="space-y-2 flex-1">
-          <Label>Version</Label>
-          <Input
-            value={state.prompt_version}
-            onChange={e => onChange({ prompt_version: e.target.value })}
-            placeholder="1.0.0"
-            className="w-32"
-          />
-        </div>
-        {viewMode === 'operator' && (
-          <p className="text-xs text-muted-foreground mt-6">
-            Update this when you make significant changes
-          </p>
-        )}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Version</Label>
+        <Input
+          value={state.prompt_version}
+          onChange={e => onChange({ prompt_version: e.target.value })}
+          placeholder="1.0.0"
+          className="w-32"
+        />
       </div>
 
       {/* Prompt Content */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label>
-            {viewMode === 'operator' ? 'Agent Instructions' : 'Prompt Content'}
+          <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+            {isOperator ? 'Agent Instructions' : 'Prompt Content'}
           </Label>
           <span className={cn(
             'text-xs',
@@ -617,41 +543,28 @@ export function PromptStep({ state, onChange }: StepProps) {
         <Textarea
           value={state.prompt_content}
           onChange={e => onChange({ prompt_content: e.target.value })}
-          placeholder={viewMode === 'operator'
-            ? 'Write instructions for your agent. Be specific about what it should do, how it should respond, and any rules it must follow...'
+          placeholder={isOperator
+            ? 'Write instructions for your agent...'
             : 'System prompt content...'}
-          rows={12}
-          className="font-mono text-sm"
+          rows={14}
+          className="font-mono text-sm resize-none"
         />
-        {viewMode === 'operator' && (
-          <p className="text-xs text-muted-foreground">
-            Tip: Be specific and clear. Include examples of good responses when possible.
-          </p>
-        )}
       </div>
 
       {/* Config Variables */}
       <Collapsible open={showVariables} onOpenChange={setShowVariables}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="gap-2">
-            <ChevronDown className={cn('h-4 w-4 transition-transform', showVariables && 'rotate-180')} />
-            {viewMode === 'operator' ? 'Advanced: Variables' : 'Config Variables'}
-          </Button>
+          <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showVariables && 'rotate-180')} />
+            {isOperator ? 'Advanced: Variables' : 'Config Variables'}
+          </button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3 space-y-3">
-          <p className="text-xs text-muted-foreground">
-            {viewMode === 'operator'
-              ? 'Variables let you customize behavior without editing the main instructions.'
-              : 'Key-value pairs available in prompt template.'}
-          </p>
-          <div className="bg-surface-2 p-4 rounded-lg">
-            <pre className="text-xs font-mono overflow-x-auto">
+        <CollapsibleContent className="pt-3">
+          <div className="bg-accent/30 p-4 rounded-lg">
+            <pre className="text-xs font-mono text-muted-foreground overflow-x-auto">
               {JSON.stringify(state.config_variables, null, 2) || '{}'}
             </pre>
           </div>
-          <p className="text-xs text-muted-foreground italic">
-            Variable editor coming soon...
-          </p>
         </CollapsibleContent>
       </Collapsible>
     </div>
@@ -664,38 +577,39 @@ export function PromptStep({ state, onChange }: StepProps) {
 
 export function ReviewStep({ state }: StepProps) {
   const { viewMode } = useSystem();
+  const isOperator = viewMode === 'operator';
   const enabledCapabilities = state.capabilities.filter(c => c.enabled);
 
   const sections = [
     {
-      title: viewMode === 'operator' ? 'Identity' : 'Identity',
+      title: 'Identity',
       items: [
-        { label: 'Name', value: state.name || 'Not set' },
-        { label: 'Description', value: state.description || 'Not set' },
+        { label: 'Name', value: state.name || '—' },
+        { label: 'Description', value: state.description || '—' },
         { label: 'Category', value: state.category },
-        { label: viewMode === 'operator' ? 'Internal only' : 'Internal', value: state.internal ? 'Yes' : 'No' },
+        { label: isOperator ? 'Internal only' : 'Internal', value: state.internal ? 'Yes' : 'No' },
       ],
     },
     {
-      title: viewMode === 'operator' ? 'Capabilities' : 'Capabilities',
+      title: 'Capabilities',
       items: [
-        { label: viewMode === 'operator' ? 'Enabled' : 'Capability Count', value: `${enabledCapabilities.length} capabilities` },
-        { label: viewMode === 'operator' ? 'Tools' : 'Tool Allowlist', value: `${state.tool_allowlist.length} tools` },
+        { label: isOperator ? 'Enabled' : 'Capability Count', value: `${enabledCapabilities.length} capabilities` },
+        { label: isOperator ? 'Tools' : 'Tool Allowlist', value: `${state.tool_allowlist.length} tools` },
       ],
     },
     {
-      title: viewMode === 'operator' ? 'Safety' : 'Governance',
+      title: isOperator ? 'Safety' : 'Governance',
       items: [
-        { label: viewMode === 'operator' ? 'Safety Level' : 'Risk Tier', value: state.risk_tier.toUpperCase() },
-        { label: viewMode === 'operator' ? 'Needs Approval' : 'Approval Required', value: state.approval_required ? 'Yes' : 'No' },
-        { label: viewMode === 'operator' ? 'Rules' : 'Constraints', value: `${state.constraints.length} defined` },
+        { label: isOperator ? 'Safety Level' : 'Risk Tier', value: state.risk_tier },
+        { label: isOperator ? 'Needs Approval' : 'Approval Required', value: state.approval_required ? 'Yes' : 'No' },
+        { label: isOperator ? 'Rules' : 'Constraints', value: `${state.constraints.length} defined` },
       ],
     },
     {
-      title: viewMode === 'operator' ? 'Instructions' : 'Prompt',
+      title: isOperator ? 'Instructions' : 'Prompt',
       items: [
         { label: 'Version', value: state.prompt_version },
-        { label: viewMode === 'operator' ? 'Length' : 'Char Count', value: `${state.prompt_content.length} characters` },
+        { label: isOperator ? 'Length' : 'Char Count', value: `${state.prompt_content.length} characters` },
       ],
     },
   ];
@@ -703,26 +617,25 @@ export function ReviewStep({ state }: StepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-1">
-          {viewMode === 'operator' ? 'Review Your Agent' : 'Review & Propose'}
+        <h2 className="text-lg font-semibold text-foreground mb-1">
+          {isOperator ? 'Review Your Agent' : 'Review & Propose'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {viewMode === 'operator' 
-            ? 'Check everything looks right before submitting for review.'
+          {isOperator 
+            ? 'Check everything looks right before submitting.'
             : 'Review configuration before creating ConfigChangeProposal.'}
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4">
+      <div className="space-y-3">
         {sections.map(section => (
           <div key={section.title} className="rounded-lg border border-border p-4">
-            <h3 className="font-medium text-sm mb-3">{section.title}</h3>
-            <div className="grid gap-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{section.title}</h3>
+            <div className="space-y-2">
               {section.items.map(item => (
                 <div key={item.label} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{item.label}</span>
-                  <span className="font-medium">{item.value}</span>
+                  <span className="text-foreground font-medium">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -730,15 +643,14 @@ export function ReviewStep({ state }: StepProps) {
         ))}
       </div>
 
-      {/* What happens next */}
-      <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
-        <h4 className="font-medium text-sm mb-2">
-          {viewMode === 'operator' ? 'What happens next?' : 'Next Steps'}
+      <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
+        <h4 className="text-sm font-medium text-foreground mb-1">
+          {isOperator ? 'What happens next?' : 'Next Steps'}
         </h4>
         <p className="text-sm text-muted-foreground">
-          {viewMode === 'operator'
-            ? 'Your agent will be saved as a draft and submitted for review. Once approved, you can deploy it to your team.'
-            : 'Creates a ConfigChangeProposal with change_type: create. Proposal enters Authority Queue for approval workflow.'}
+          {isOperator
+            ? 'Your agent will be saved and submitted for review. Once approved, you can deploy it.'
+            : 'Creates a ConfigChangeProposal with change_type: create. Enters Authority Queue.'}
         </p>
       </div>
     </div>
