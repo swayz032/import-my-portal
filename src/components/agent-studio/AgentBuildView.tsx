@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useSystem } from '@/contexts/SystemContext';
 import type {
@@ -8,7 +8,6 @@ import type {
   ProviderDef,
   SkillpackRef,
 } from '@/contracts/ecosystem';
-import { OperatorEngineerToggle } from '@/components/shared/OperatorEngineerToggle';
 import { StaffAvatar } from './StaffAvatar';
 import { PromptEditor } from './PromptEditor';
 import { AgentConfigTab } from './AgentConfigTab';
@@ -24,6 +23,7 @@ import sarahAvatar from '@/assets/staff/sarah.png';
 import eliAvatar from '@/assets/staff/eli.png';
 import quinnAvatar from '@/assets/staff/quinn.png';
 import noraAvatar from '@/assets/staff/nora.png';
+import claraAvatar from '@/assets/staff/clara.png';
 
 const staffPhotos: Record<string, string> = {
   ava: avaAvatar,
@@ -31,6 +31,7 @@ const staffPhotos: Record<string, string> = {
   eli: eliAvatar,
   quinn: quinnAvatar,
   nora: noraAvatar,
+  clara: claraAvatar,
 };
 
 interface AgentBuildViewProps {
@@ -75,44 +76,35 @@ export function AgentBuildView({
   ];
 
   return (
-    <div className={cn(
-      'flex flex-col',
-      '-m-4 md:-m-6 lg:-m-8',
-      'h-[calc(100vh-3.5rem)]'
-    )}>
-      {/* Top bar — back + name + save */}
-      <div className="shrink-0 border-b border-border bg-background">
-        <div className="flex items-center justify-between px-6 h-14">
+    <div className="h-full flex flex-col">
+      {/* Top bar — back + name + save — single clean header */}
+      <div className="shrink-0 border-b border-border">
+        <div className="flex items-center justify-between px-1 h-12">
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className={cn(
-                'h-8 w-8 rounded-lg flex items-center justify-center',
-                'text-muted-foreground hover:text-foreground',
-                'hover:bg-accent/50 transition-colors'
-              )}
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <h1 className="text-lg font-semibold text-foreground">
+            <div className="h-5 w-px bg-border" />
+            <h1 className="text-sm font-medium text-foreground">
               {member.name}
             </h1>
-            <Badge variant="outline" className="text-[11px] text-muted-foreground">
+            <Badge variant="outline" className="text-[11px] text-muted-foreground font-normal border-border">
               {isOperator ? member.title : member.staff_id}
             </Badge>
           </div>
 
-          <div className="flex items-center gap-3">
-            <OperatorEngineerToggle />
-            <div className="h-5 w-px bg-border" />
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mr-2">
               <Switch
                 checked={config.enabled}
                 onCheckedChange={(enabled) => onConfigChange({ ...config, enabled })}
-                className="data-[state=checked]:bg-success"
+                className="data-[state=checked]:bg-success scale-90"
               />
               <span className={cn(
-                'text-xs font-medium',
+                'text-xs',
                 config.enabled ? 'text-success' : 'text-muted-foreground'
               )}>
                 {config.enabled ? 'Active' : 'Off'}
@@ -120,28 +112,29 @@ export function AgentBuildView({
             </div>
             <Button
               size="sm"
+              variant="outline"
               onClick={handleSave}
-              className="h-8 px-4 text-xs gap-1.5"
+              className="h-7 px-3 text-xs gap-1.5 border-border"
             >
-              {saved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+              {saved ? <Check className="h-3 w-3" /> : <Save className="h-3 w-3" />}
               {saved ? 'Saved' : 'Save'}
             </Button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="px-6">
-          <div className="flex items-center gap-1">
+        {/* Tabs — clean underline style */}
+        <div className="px-4 -mb-px">
+          <div className="flex items-center gap-0">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'px-4 py-2.5 text-sm font-medium transition-colors',
-                  'border-b-2 -mb-px',
+                  'px-4 py-2 text-[13px] font-medium transition-colors',
+                  'border-b-2',
                   activeTab === tab.id
                     ? 'border-primary text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground/80'
                 )}
               >
                 {isOperator ? tab.operatorLabel : tab.label}
@@ -151,19 +144,19 @@ export function AgentBuildView({
         </div>
       </div>
 
-      {/* Content area */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Content area — fills remaining space, single scroll */}
+      <div className="flex-1 min-h-0 overflow-auto">
         {activeTab === 'prompt' && (
           <div className="h-full flex">
-            {/* Left: Agent photo */}
+            {/* Left: Agent photo — fixed width */}
             <div className={cn(
-              'shrink-0 flex flex-col items-center justify-start',
-              'w-[380px] xl:w-[440px] 2xl:w-[500px]',
-              'bg-surface-1 border-r border-border',
-              'p-8'
+              'shrink-0 flex flex-col items-center',
+              'w-[320px] xl:w-[380px]',
+              'border-r border-border',
+              'p-6'
             )}>
               {photoUrl ? (
-                <div className="w-full aspect-[4/5] max-w-[400px] rounded-2xl overflow-hidden bg-surface-2">
+                <div className="w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-1">
                   <img
                     src={photoUrl}
                     alt={member.name}
@@ -172,8 +165,8 @@ export function AgentBuildView({
                 </div>
               ) : (
                 <div className={cn(
-                  'w-full aspect-[4/5] max-w-[400px] rounded-2xl overflow-hidden',
-                  'bg-gradient-to-br from-surface-2 to-surface-3',
+                  'w-full aspect-[4/5] rounded-xl overflow-hidden',
+                  'bg-gradient-to-br from-surface-1 to-surface-2',
                   'flex items-center justify-center'
                 )}>
                   <StaffAvatar
@@ -197,111 +190,100 @@ export function AgentBuildView({
         )}
 
         {activeTab === 'config' && (
-          <div className="h-full overflow-auto">
-            <AgentConfigTab
-              member={member}
-              config={config}
-              toolCatalog={toolCatalog}
-              providers={providers}
-              skillpack={skillpack}
-              onConfigChange={onConfigChange}
-            />
-          </div>
+          <AgentConfigTab
+            member={member}
+            config={config}
+            toolCatalog={toolCatalog}
+            providers={providers}
+            skillpack={skillpack}
+            onConfigChange={onConfigChange}
+          />
         )}
 
         {activeTab === 'skillpack' && (
-          <div className="h-full overflow-auto">
-            <SkillpackPromptsTab member={member} skillpack={skillpack} />
-          </div>
+          <SkillpackPromptsTab member={member} skillpack={skillpack} />
         )}
 
         {activeTab === 'tools' && (
-          <div className="h-full overflow-auto">
-            <div className="max-w-4xl mx-auto p-8 space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">
-                {isOperator ? 'Active Tools' : 'Tool Policy'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {toolCatalog.length} tools available for {member.name}
-              </p>
-              <div className="space-y-2">
-                {toolCatalog.map(tool => (
-                  <div key={tool.name} className={cn(
-                    'flex items-center justify-between p-4 rounded-xl',
-                    'bg-card border border-border'
-                  )}>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{tool.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{tool.description}</p>
-                    </div>
-                    <Badge variant="outline" className={cn(
-                      'text-[11px]',
-                      tool.risk === 'low' && 'bg-success/15 text-success border-success/25',
-                      tool.risk === 'medium' && 'bg-warning/15 text-warning border-warning/25',
-                      tool.risk === 'high' && 'bg-destructive/15 text-destructive border-destructive/25',
-                      tool.risk === 'critical' && 'bg-destructive/20 text-destructive border-destructive/30',
-                    )}>
-                      {isOperator ? tool.risk.charAt(0).toUpperCase() + tool.risk.slice(1) : tool.risk}
-                    </Badge>
+          <div className="max-w-4xl mx-auto p-8 space-y-4">
+            <h3 className="text-base font-semibold text-foreground">
+              {isOperator ? 'Active Tools' : 'Tool Policy'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {toolCatalog.length} tools available for {member.name}
+            </p>
+            <div className="space-y-2">
+              {toolCatalog.map(tool => (
+                <div key={tool.name} className="flex items-center justify-between p-4 rounded-xl bg-card border border-border">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{tool.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tool.description}</p>
                   </div>
-                ))}
-                {toolCatalog.length === 0 && (
-                  <p className="text-sm text-muted-foreground py-8 text-center">
-                    No tools configured for this agent
-                  </p>
-                )}
-              </div>
+                  <Badge variant="outline" className={cn(
+                    'text-[11px]',
+                    tool.risk === 'low' && 'bg-success/10 text-success border-success/20',
+                    tool.risk === 'medium' && 'bg-warning/10 text-warning border-warning/20',
+                    tool.risk === 'high' && 'bg-destructive/10 text-destructive border-destructive/20',
+                    tool.risk === 'critical' && 'bg-destructive/15 text-destructive border-destructive/25',
+                  )}>
+                    {isOperator ? tool.risk.charAt(0).toUpperCase() + tool.risk.slice(1) : tool.risk}
+                  </Badge>
+                </div>
+              ))}
+              {toolCatalog.length === 0 && (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No tools configured for this agent
+                </p>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === 'advanced' && (
-          <div className="h-full overflow-auto">
-            <div className="max-w-4xl mx-auto p-8 space-y-6">
-              <h3 className="text-lg font-semibold text-foreground">Advanced Configuration</h3>
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-card border border-border">
-                  <p className="text-sm font-medium text-foreground mb-1">Rollout State</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {config.rollout_state}
-                    {config.rollout_state === 'active' && ' • Live traffic'}
-                  </p>
+          <div className="max-w-4xl mx-auto p-8 space-y-6">
+            <h3 className="text-base font-semibold text-foreground">Advanced Configuration</h3>
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-card border border-border">
+                <p className="text-sm font-medium text-foreground mb-1">Rollout State</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {config.rollout_state}
+                  {config.rollout_state === 'active' && ' • Live traffic'}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-card border border-border">
+                <p className="text-sm font-medium text-foreground mb-1">
+                  {isOperator ? 'Connected Services' : 'Provider Bindings'}
+                </p>
+                <div className="space-y-2 mt-2">
+                  {config.provider_bindings.map(binding => (
+                    <div key={binding.provider_id} className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {isOperator ? binding.provider_id.replace(/_/g, ' ') : binding.provider_id}
+                      </span>
+                      <Badge variant="outline" className={cn(
+                        'text-[10px]',
+                        binding.connection_status === 'connected'
+                          ? 'bg-success/10 text-success border-success/20'
+                          : 'bg-muted/50 text-muted-foreground border-border'
+                      )}>
+                        {binding.connection_status}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-                <div className="p-4 rounded-xl bg-card border border-border">
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    {isOperator ? 'Connected Services' : 'Provider Bindings'}
-                  </p>
-                  <div className="space-y-2 mt-2">
-                    {config.provider_bindings.map(binding => (
-                      <div key={binding.provider_id} className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {isOperator ? binding.provider_id.replace(/_/g, ' ') : binding.provider_id}
-                        </span>
-                        <Badge variant="outline" className={cn(
-                          'text-[10px]',
-                          binding.connection_status === 'connected'
-                            ? 'bg-success/15 text-success border-success/25'
-                            : 'bg-muted text-muted-foreground'
-                        )}>
-                          {binding.connection_status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-4 rounded-xl bg-card border border-border">
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    {isOperator ? 'Safety Rules' : 'Hard Rules'}
-                  </p>
-                  <ul className="space-y-1.5 mt-2">
-                    {member.hard_rules.map((rule, i) => (
-                      <li key={i} className="text-xs text-muted-foreground flex gap-2">
-                        <span className="text-primary shrink-0">•</span>
-                        {rule}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              </div>
+              <div className="p-4 rounded-xl bg-card border border-border">
+                <p className="text-sm font-medium text-foreground mb-1">
+                  {isOperator ? 'Safety Rules' : 'Hard Rules'}
+                </p>
+                <ul className="space-y-1.5 mt-2">
+                  {member.hard_rules.map((rule, i) => (
+                    <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                      <span className="text-primary/60 shrink-0">•</span>
+                      {rule}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </div>
