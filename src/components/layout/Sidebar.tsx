@@ -24,6 +24,7 @@ import {
   Inbox,
   Server,
   Bot,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -251,7 +252,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           {/* Main nav items */}
           {navItems.map((item) => renderNavItem(item))}
 
-          {/* Agent Studio — direct link, not a group */}
+          {/* Agent Studio group */}
           {!isCollapsed && (
             <div className="pt-4 pb-1.5">
               <p className="px-3 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-widest">
@@ -260,6 +261,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
             </div>
           )}
           {renderNavItem({ to: '/agent-studio', icon: Bot, label: 'Agent Studio' })}
+          {renderNavItem({ to: '/agent-studio/create', icon: Plus, label: 'Create Agent' })}
 
           {/* Business section */}
           {viewMode === 'operator' && (
