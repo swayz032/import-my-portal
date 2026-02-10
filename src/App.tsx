@@ -17,6 +17,8 @@ import ConnectedApps from "./pages/ConnectedApps";
 import Advanced from "./pages/Advanced";
 import LLMOpsDesk from "./pages/LLMOpsDesk";
 import Auth from "./pages/Auth";
+import AuthMfa from "./pages/AuthMfa";
+import AccessDenied from "./pages/AccessDenied";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { PublicRoute } from "./components/auth/PublicRoute";
@@ -54,6 +56,8 @@ const App = () => (
             <Sonner />
             <Routes>
               <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+              <Route path="/auth/mfa" element={<AuthMfa />} />
+              <Route path="/access-denied" element={<AccessDenied />} />
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route
                 path="/home"
