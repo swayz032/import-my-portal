@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, session, sessionInfo, loading, mfaRequired } = useAuth();
 
   if (loading) {
     return (
@@ -17,8 +17,19 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) {
+  // No session at all → login
+  if (!session || !user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // MFA enabled but not verified → MFA page
+  if (mfaRequired) {
+    return <Navigate to="/auth/mfa" replace />;
+  }
+
+  // Session validated but not allowlisted → access denied
+  if (sessionInfo && !sessionInfo.isAllowlisted) {
+    return <Navigate to="/access-denied" replace />;
   }
 
   return <>{children}</>;

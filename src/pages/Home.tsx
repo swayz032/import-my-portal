@@ -82,7 +82,7 @@ export default function Home() {
   };
 
   // Get formal name (e.g., "Mr. Scott" from "tonioscott39")
-  const formalName = user?.parsedName?.formalName || user?.name || 'there';
+  const formalName = user?.displayName || 'there';
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">

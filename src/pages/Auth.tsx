@@ -4,242 +4,126 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Lock } from 'lucide-react';
 import { z } from 'zod';
 
-const authSchema = z.object({
-  email: z.string().trim().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+const loginSchema = z.object({
+  email: z.string().trim().email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  
-  // Signup form state
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
-    
-    // Validate input
-    const result = authSchema.safeParse({ email: loginEmail, password: loginPassword });
-    if (!result.success) {
-      setError(result.error.errors[0].message);
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    const { error } = await signIn(loginEmail, loginPassword);
-    
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        setError('Invalid email or password. Please try again.');
-      } else if (error.message.includes('Email not confirmed')) {
-        setError('Please confirm your email address before logging in.');
-      } else {
-        setError(error.message);
-      }
-      setIsLoading(false);
-      return;
-    }
-    
-    navigate('/dashboard');
-  };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    
-    // Validate passwords match
-    if (signupPassword !== signupConfirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    
-    // Validate input
-    const result = authSchema.safeParse({ email: signupEmail, password: signupPassword });
+    const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       setError(result.error.errors[0].message);
       return;
     }
-    
+
     setIsLoading(true);
-    
-    const { error } = await signUp(signupEmail, signupPassword);
-    
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        setError('An account with this email already exists. Please log in instead.');
+    const { error: authError } = await signIn(email, password);
+
+    if (authError) {
+      if (authError.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password.');
+      } else if (authError.message.includes('Email not confirmed')) {
+        setError('Please confirm your email address before signing in.');
       } else {
-        setError(error.message);
+        setError(authError.message);
       }
       setIsLoading(false);
       return;
     }
-    
-    setSuccess('Account created successfully! You can now log in.');
-    setSignupEmail('');
-    setSignupPassword('');
-    setSignupConfirmPassword('');
-    setIsLoading(false);
+
+    navigate('/home');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md bg-card border-border">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">A</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl text-foreground">Aspire Admin Portal</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Sign in to access your admin dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          
-          {success && (
-            <Alert className="mb-4 border-success bg-success/10">
-              <AlertDescription className="text-success">{success}</AlertDescription>
-            </Alert>
-          )}
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      {/* Subtle radial gradient background */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at 50% 0%, hsl(187 82% 53% / 0.04) 0%, transparent 60%)',
+      }} />
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">Confirm Password</Label>
-                  <Input
-                    id="signup-confirm-password"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={signupConfirmPassword}
-                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    disabled={isLoading}
-                    required
-                    className="bg-input border-border"
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      <div className="relative w-full max-w-sm px-6">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-11 h-11 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-5">
+            <span className="text-primary font-semibold text-lg tracking-tight">A</span>
+          </div>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Aspire Admin</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">Sign in to continue</p>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <Alert variant="destructive" className="mb-5 border-destructive/30 bg-destructive/5">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <AlertDescription className="text-sm">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="admin@aspire.ai"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              required
+              autoComplete="email"
+              className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+              autoComplete="current-password"
+              className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-10 font-medium"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              'Sign In'
+            )}
+          </Button>
+        </form>
+
+        {/* Footer */}
+        <div className="mt-8 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
+          <Lock className="h-3 w-3" />
+          <span>Invite-only access</span>
+        </div>
+      </div>
     </div>
   );
 }

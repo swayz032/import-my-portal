@@ -7,7 +7,7 @@ interface PublicRouteProps {
 }
 
 export function PublicRoute({ children }: PublicRouteProps) {
-  const { user, loading } = useAuth();
+  const { session, loading, mfaRequired } = useAuth();
 
   if (loading) {
     return (
@@ -17,8 +17,8 @@ export function PublicRoute({ children }: PublicRouteProps) {
     );
   }
 
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
+  if (session && !mfaRequired) {
+    return <Navigate to="/home" replace />;
   }
 
   return <>{children}</>;
