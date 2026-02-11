@@ -7,7 +7,7 @@ import {
   estimateTokens,
   getOrderedBlocks,
 } from '@/ecosystem/snapshot/promptRegistry';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 const MAX_TOKENS = 120000;
 
@@ -54,11 +54,10 @@ export function PromptEditor({ member }: PromptEditorProps) {
         )}
       </div>
 
-      {/* Editor area */}
-      <div className="flex-1 min-h-0 px-6 pb-2">
+      {/* Editor area — invisible premium scroll */}
+      <div className="flex-1 min-h-0 px-6 pb-2 overflow-hidden">
         {isOperator ? (
-          // Operator: read-only view
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border/40 scrollbar-track-transparent hover:scrollbar-thumb-border/60 transition-colors">
             {hasPrompt ? (
               <div className="pr-4">
                 <pre className={cn(
@@ -75,9 +74,8 @@ export function PromptEditor({ member }: PromptEditorProps) {
                 </p>
               </div>
             )}
-          </ScrollArea>
+          </div>
         ) : (
-          // Engineer: editable textarea
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -88,7 +86,8 @@ export function PromptEditor({ member }: PromptEditorProps) {
               'text-sm text-foreground leading-relaxed',
               'placeholder:text-muted-foreground/50',
               'focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/30',
-              'transition-colors'
+              'transition-colors',
+              'scrollbar-thin scrollbar-thumb-border/40 scrollbar-track-transparent hover:scrollbar-thumb-border/60'
             )}
           />
         )}

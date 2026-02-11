@@ -144,19 +144,19 @@ export function AgentBuildView({
         </div>
       </div>
 
-      {/* Content area — fills remaining space, single scroll */}
-      <div className="flex-1 min-h-0 overflow-auto">
+      {/* Content area — fills remaining viewport, no page-level scroll */}
+      <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === 'prompt' && (
           <div className="h-full flex">
-            {/* Left: Agent photo — fixed width */}
+            {/* Left: Agent photo — fixed width, contained */}
             <div className={cn(
               'shrink-0 flex flex-col items-center',
-              'w-[320px] xl:w-[380px]',
+              'w-[280px] xl:w-[320px]',
               'border-r border-border',
-              'p-6'
+              'p-5'
             )}>
               {photoUrl ? (
-                <div className="w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-1">
+                <div className="w-full aspect-[4/5] max-h-[360px] rounded-xl overflow-hidden bg-surface-1">
                   <img
                     src={photoUrl}
                     alt={member.name}
@@ -165,7 +165,7 @@ export function AgentBuildView({
                 </div>
               ) : (
                 <div className={cn(
-                  'w-full aspect-[4/5] rounded-xl overflow-hidden',
+                  'w-full aspect-[4/5] max-h-[360px] rounded-xl overflow-hidden',
                   'bg-gradient-to-br from-surface-1 to-surface-2',
                   'flex items-center justify-center'
                 )}>
@@ -176,14 +176,14 @@ export function AgentBuildView({
                   />
                 </div>
               )}
-              <div className="mt-4 text-center">
+              <div className="mt-3 text-center">
                 <p className="text-sm font-medium text-foreground">{member.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{member.title}</p>
               </div>
             </div>
 
-            {/* Right: Prompt editor */}
-            <div className="flex-1 min-w-0">
+            {/* Right: Prompt editor — internal scroll */}
+            <div className="flex-1 min-w-0 min-h-0">
               <PromptEditor member={member} />
             </div>
           </div>

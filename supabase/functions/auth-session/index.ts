@@ -55,22 +55,21 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnon = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // User-scoped client for getClaims
+    // User-scoped client to validate the token
     const userClient = createClient(supabaseUrl, supabaseAnon, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Invalid session" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = claimsData.claims.sub;
-    const email = claimsData.claims.email as string;
+    const userId = user.id;
+    const email = user.email || "";
 
     // Service-role client for admin queries
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -100,15 +99,15 @@ serve(async (req: Request) => {
     const verifiedFactors = factorsData?.factors?.filter((f: any) => f.status === "verified") || [];
     const mfaEnabled = verifiedFactors.length > 0;
 
-    // Check AAL level from claims
-    const aal = claimsData.claims.aal as string || "aal1";
-    const mfaVerified = aal === "aal2";
+    // Check AAL from the user's amr claims
+    const amr = user.amr || [];
+    const mfaVerified = amr.some((entry: any) => entry.method === "totp");
 
     const userRoles = roles?.map((r: any) => r.role) || [];
     const isAllowlisted = !!allowlistEntry;
     const isAdmin = userRoles.includes("admin");
 
-    // Audit log for session check
+    // Audit log
     await adminClient.from("audit_log").insert({
       user_id: userId,
       event: "session_check",

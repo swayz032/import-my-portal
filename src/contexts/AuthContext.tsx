@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthUser {
   id: string;
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (error || !data?.user) {
+        console.warn('auth-session error:', error);
         setSessionInfo(null);
         setUser(null);
         return null;
@@ -53,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(info.user);
       setMfaRequired(info.mfaEnabled && !info.mfaVerified);
       return info;
-    } catch {
+    } catch (err) {
+      console.warn('auth-session fetch failed:', err);
       setSessionInfo(null);
       setUser(null);
       return null;
@@ -61,57 +63,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const { data: { session: s } } = await supabase.auth.getSession();
-    if (s?.access_token) {
-      setSession(s);
-      await fetchSessionInfo(s.access_token);
-    } else {
-      setSession(null);
-      setUser(null);
-      setSessionInfo(null);
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (s?.access_token) {
+        setSession(s);
+        await fetchSessionInfo(s.access_token);
+      } else {
+        setSession(null);
+        setUser(null);
+        setSessionInfo(null);
+      }
+    } catch (err) {
+      console.warn('refreshSession failed:', err);
     }
   }, [fetchSessionInfo]);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
+      async (_event, s) => {
         setSession(s);
         if (s?.access_token) {
-          // Defer to avoid potential deadlock
-          setTimeout(() => fetchSessionInfo(s.access_token), 0);
+          setTimeout(() => {
+            fetchSessionInfo(s.access_token).catch(console.warn).finally(() => setLoading(false));
+          }, 0);
         } else {
           setUser(null);
           setSessionInfo(null);
           setMfaRequired(false);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    // THEN check existing session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       if (s?.access_token) {
-        fetchSessionInfo(s.access_token).finally(() => setLoading(false));
+        fetchSessionInfo(s.access_token).catch(console.warn).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
-    });
+    }).catch(() => setLoading(false));
 
     return () => subscription.unsubscribe();
   }, [fetchSessionInfo]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return { error: { message: error.message } };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        return { error: { message: error.message } };
+      }
+      return { error: null };
+    } catch (err: any) {
+      console.error('signIn error:', err);
+      return { error: { message: err?.message || 'An unexpected error occurred.' } };
     }
-    return { error: null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('signOut error:', err);
+    }
     setUser(null);
     setSession(null);
     setSessionInfo(null);
