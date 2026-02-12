@@ -154,5 +154,20 @@
     ],
     "description": "Reviews contracts, flags compliance issues, and assists with legal document organization.",
     "avatar_emoji": "⚖️"
+  },
+  {
+    "staff_id": "clara",
+    "name": "Clara",
+    "role": "client_success",
+    "title": "Client Success Manager",
+    "channel": "multi",
+    "visibility": "external",
+    "hard_rules": [
+      "Always prioritize customer retention and satisfaction",
+      "Escalate churn risk signals within 24 hours",
+      "Never make pricing commitments without approval"
+    ],
+    "description": "Manages client relationships, onboarding, and proactive success outreach.",
+    "avatar_emoji": "🤝"
   }
 ]
