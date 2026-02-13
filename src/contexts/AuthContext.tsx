@@ -109,8 +109,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Try normal sign-in first
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
+        // If email provider is disabled, use the admin-sign-in edge function fallback
+        if (error.message.includes('Email logins are disabled')) {
+          console.log('Email provider disabled, trying admin-sign-in fallback...');
+          const { data: fallbackData, error: fallbackError } = await supabase.functions.invoke('admin-sign-in', {
+            body: { email, password },
+          });
+
+          if (fallbackError) {
+            return { error: { message: fallbackError.message || 'Authentication failed' } };
+          }
+
+          if (fallbackData?.error) {
+            return { error: { message: fallbackData.error } };
+          }
+
+          // If we got a magiclink fallback, verify the OTP to create a session
+          if (fallbackData?.type === 'magiclink_fallback') {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+              token_hash: fallbackData.token_hash,
+              type: 'magiclink',
+            });
+            if (verifyError) {
+              console.error('verifyOtp error:', verifyError);
+              return { error: { message: verifyError.message || 'Session creation failed' } };
+            }
+            return { error: null };
+          }
+
+          // If we got a normal session response (email provider was re-enabled)
+          if (fallbackData?.access_token) {
+            const { error: setError } = await supabase.auth.setSession({
+              access_token: fallbackData.access_token,
+              refresh_token: fallbackData.refresh_token,
+            });
+            if (setError) {
+              return { error: { message: setError.message } };
+            }
+            return { error: null };
+          }
+
+          return { error: { message: 'Unexpected authentication response' } };
+        }
         return { error: { message: error.message } };
       }
       return { error: null };
