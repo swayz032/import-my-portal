@@ -99,9 +99,16 @@ serve(async (req: Request) => {
     const verifiedFactors = factorsData?.factors?.filter((f: any) => f.status === "verified") || [];
     const mfaEnabled = verifiedFactors.length > 0;
 
-    // Check AAL from the user's amr claims
-    const amr = user.amr || [];
-    const mfaVerified = amr.some((entry: any) => entry.method === "totp");
+    // Decode JWT to check AAL level (user.amr is not available from getUser())
+    const token = authHeader.replace("Bearer ", "");
+    let mfaVerified = false;
+    try {
+      const payloadBase64 = token.split(".")[1];
+      const payload = JSON.parse(atob(payloadBase64));
+      mfaVerified = payload.aal === "aal2" || (payload.amr || []).some((entry: any) => entry.method === "totp");
+    } catch (e) {
+      console.warn("JWT decode error:", e);
+    }
 
     const userRoles = roles?.map((r: any) => r.role) || [];
     const isAllowlisted = !!allowlistEntry;
