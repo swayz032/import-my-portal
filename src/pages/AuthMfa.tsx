@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Loader2, AlertCircle, ShieldCheck, Copy, Check } from 'lucide-react';
 
-type MfaStep = 'loading' | 'enroll' | 'verify';
+type MfaStep = 'loading' | 'enroll' | 'verify' | 'resetting';
 
 export default function AuthMfa() {
   const navigate = useNavigate();
@@ -64,6 +64,35 @@ export default function AuthMfa() {
     navigator.clipboard.writeText(secret);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleResetMfa = async () => {
+    setStep('resetting');
+    setError(null);
+    setCode('');
+    try {
+      // Unenroll existing verified factor
+      if (verifyFactorId) {
+        const { error: unenrollErr } = await supabase.auth.mfa.unenroll({ factorId: verifyFactorId });
+        if (unenrollErr) throw unenrollErr;
+      }
+      // Enroll a fresh factor
+      const { data: enrollData, error: enrollErr } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'Aspire Admin TOTP',
+      });
+      if (enrollErr) throw enrollErr;
+
+      setQrUri(enrollData.totp.uri);
+      setSecret(enrollData.totp.secret);
+      setEnrollFactorId(enrollData.id);
+      setVerifyFactorId('');
+      setStep('enroll');
+    } catch (err: any) {
+      console.error('MFA reset error:', err);
+      setError(err?.message || 'Failed to reset MFA. Please try again.');
+      setStep('verify');
+    }
   };
 
   const handleEnrollVerify = async () => {
@@ -136,10 +165,13 @@ export default function AuthMfa() {
     }
   };
 
-  if (step === 'loading') {
+  if (step === 'loading' || step === 'resetting') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          {step === 'resetting' && <p className="text-sm text-muted-foreground">Resetting MFA…</p>}
+        </div>
       </div>
     );
   }
@@ -242,6 +274,19 @@ export default function AuthMfa() {
             )}
           </Button>
         </div>
+
+        {/* Lost authenticator - only show on verify step */}
+        {step === 'verify' && (
+          <div className="mt-5 text-center">
+            <button
+              type="button"
+              onClick={handleResetMfa}
+              className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
+            >
+              Lost your authenticator? Reset MFA
+            </button>
+          </div>
+        )}
 
         <div className="mt-8 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
           <ShieldCheck className="h-3 w-3" />
