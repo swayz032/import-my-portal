@@ -103,6 +103,16 @@ function getAdminToken(): string {
   return sessionStorage.getItem('aspire_admin_token') ?? '';
 }
 
+export function clearAdminToken(): void {
+  sessionStorage.removeItem('aspire_admin_token');
+}
+
+export interface AdminTokenExchangeResponse {
+  admin_token: string;
+  expires_at: string;
+  correlation_id: string;
+}
+
 function getCorrelationId(): string {
   return crypto.randomUUID();
 }
@@ -151,6 +161,36 @@ export class OpsFacadeError extends Error {
 /** GET /admin/ops/health — no auth required */
 export async function fetchOpsHealth(): Promise<OpsHealthResponse> {
   return opsFetch<OpsHealthResponse>('/admin/ops/health');
+}
+
+/** POST /admin/auth/exchange — convert Supabase access token into admin JWT */
+export async function exchangeAdminToken(accessToken: string): Promise<AdminTokenExchangeResponse> {
+  if (!accessToken) {
+    throw new OpsFacadeError('Missing access token for admin exchange', 'AUTH_REQUIRED', 401);
+  }
+
+  const response = await fetch(`${OPS_BASE_URL}/admin/auth/exchange`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-correlation-id': getCorrelationId(),
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error: OpsError = await response.json().catch(() => ({
+      code: 'FETCH_ERROR',
+      message: `HTTP ${response.status}: ${response.statusText}`,
+      correlation_id: 'unknown',
+      retryable: response.status >= 500,
+    }));
+    throw new OpsFacadeError(error.message, error.code, response.status);
+  }
+
+  const data = await response.json() as AdminTokenExchangeResponse;
+  sessionStorage.setItem('aspire_admin_token', data.admin_token);
+  return data;
 }
 
 /** GET /admin/ops/incidents — paginated, filtered */

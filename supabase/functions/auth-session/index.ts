@@ -29,6 +29,14 @@ function checkRateLimit(key: string): boolean {
   return true;
 }
 
+function parseCsvEnv(name: string): string[] {
+  const raw = Deno.env.get(name) || "";
+  return raw
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -74,30 +82,59 @@ serve(async (req: Request) => {
     // Service-role client for admin queries
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check allowlist
-    const { data: allowlistEntry } = await adminClient
-      .from("admin_allowlist")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    const bootstrapEmails = [
+      ...parseCsvEnv("ASPIRE_ADMIN_BOOTSTRAP_EMAILS"),
+      ...parseCsvEnv("ADMIN_BOOTSTRAP_EMAILS"),
+    ];
+    const isBootstrapAdmin = bootstrapEmails.includes(email.toLowerCase());
 
-    // Check roles
-    const { data: roles } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    // Check allowlist (degrades safely if table doesn't exist yet)
+    let allowlistEntry: { id: string } | null = null;
+    try {
+      const { data } = await adminClient
+        .from("admin_allowlist")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      allowlistEntry = data as { id: string } | null;
+    } catch (tableErr) {
+      console.warn("admin_allowlist lookup failed, using bootstrap fallback:", tableErr);
+    }
 
-    // Get profile
-    const { data: profile } = await adminClient
-      .from("profiles")
-      .select("display_name, email")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // Check roles (degrades safely if table doesn't exist yet)
+    let roles: Array<{ role: string }> = [];
+    try {
+      const { data } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      roles = (data as Array<{ role: string }> | null) || [];
+    } catch (tableErr) {
+      console.warn("user_roles lookup failed, using JWT/bootstrap fallback:", tableErr);
+    }
+
+    // Get profile (degrades safely if table doesn't exist yet)
+    let profile: { display_name?: string; email?: string } | null = null;
+    try {
+      const { data } = await adminClient
+        .from("profiles")
+        .select("display_name, email")
+        .eq("user_id", userId)
+        .maybeSingle();
+      profile = data as { display_name?: string; email?: string } | null;
+    } catch (tableErr) {
+      console.warn("profiles lookup failed, using email fallback:", tableErr);
+    }
 
     // Check MFA factors
-    const { data: factorsData } = await adminClient.auth.admin.mfa.listFactors({ userId });
-    const verifiedFactors = factorsData?.factors?.filter((f: any) => f.status === "verified") || [];
-    const mfaEnabled = verifiedFactors.length > 0;
+    let mfaEnabled = false;
+    try {
+      const { data: factorsData } = await adminClient.auth.admin.mfa.listFactors({ userId });
+      const verifiedFactors = factorsData?.factors?.filter((f: any) => f.status === "verified") || [];
+      mfaEnabled = verifiedFactors.length > 0;
+    } catch (mfaErr) {
+      console.warn("MFA factor lookup failed:", mfaErr);
+    }
 
     // Decode JWT to check AAL level (user.amr is not available from getUser())
     const token = authHeader.replace("Bearer ", "");
@@ -110,17 +147,25 @@ serve(async (req: Request) => {
       console.warn("JWT decode error:", e);
     }
 
+    const roleFromJwt = (user as any)?.app_metadata?.role || (user as any)?.role || null;
     const userRoles = roles?.map((r: any) => r.role) || [];
-    const isAllowlisted = !!allowlistEntry;
-    const isAdmin = userRoles.includes("admin");
+    if (roleFromJwt && !userRoles.includes(roleFromJwt)) {
+      userRoles.push(roleFromJwt);
+    }
+    const isAllowlisted = !!allowlistEntry || isBootstrapAdmin;
+    const isAdmin = userRoles.includes("admin") || isBootstrapAdmin;
 
     // Audit log
-    await adminClient.from("audit_log").insert({
-      user_id: userId,
-      event: "session_check",
-      details: { email, roles: userRoles, mfaVerified, isAllowlisted },
-      ip_address: ip,
-    });
+    try {
+      await adminClient.from("audit_log").insert({
+        user_id: userId,
+        event: "session_check",
+        details: { email, roles: userRoles, mfaVerified, isAllowlisted, isBootstrapAdmin },
+        ip_address: ip,
+      });
+    } catch (auditErr) {
+      console.warn("audit_log insert skipped:", auditErr);
+    }
 
     return new Response(
       JSON.stringify({

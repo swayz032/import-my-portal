@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, Re
 import { supabase } from '@/integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 import { devLog, devWarn, devError } from '@/lib/devLog';
+import { clearAdminToken, exchangeAdminToken } from '@/services/opsFacadeClient';
 
 // --- Security Constants ---
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;    // 30 minutes — auto-logout
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setSessionInfo(null);
     setMfaRequired(false);
+    clearAdminToken();
   }, []);
 
   // --- Fetch session info from edge function ---
@@ -80,6 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionInfo(info);
       setUser(info.user);
       setMfaRequired(info.mfaEnabled && !info.mfaVerified);
+      try {
+        await exchangeAdminToken(accessToken);
+      } catch (exchangeErr) {
+        // Keep primary auth/session valid even if ops facade token exchange fails.
+        devWarn('admin token exchange failed:', exchangeErr);
+      }
       return info;
     } catch (err) {
       devWarn('auth-session fetch failed:', err);
