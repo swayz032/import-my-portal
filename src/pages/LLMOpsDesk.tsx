@@ -18,7 +18,7 @@ import { SectionLoadingState } from '@/components/shared/PageLoadingState';
 
 function LLMOpsDeskContent() {
   const [searchParams] = useSearchParams();
-  const { addAttachment, attachments, seedDemoData, receipts } = useOpsDesk();
+  const { addAttachment, attachments } = useOpsDesk();
   const { viewMode } = useSystem();
   const { data: incidents } = useIncidents();
   const { data: approvals } = useApprovals();
@@ -26,13 +26,6 @@ function LLMOpsDeskContent() {
   const { data: providers } = useProviders();
   const [showJumpBar, setShowJumpBar] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
-  
-  // Seed demo data on mount if empty
-  useEffect(() => {
-    if (receipts.length === 0) {
-      seedDemoData();
-    }
-  }, [receipts.length, seedDemoData]);
   
   // Handle scroll for sticky jump bar
   useEffect(() => {

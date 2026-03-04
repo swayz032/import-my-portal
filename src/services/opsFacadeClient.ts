@@ -112,6 +112,25 @@ export interface OpsModelPolicy {
   updated_by: string;
 }
 
+export interface OpsReadinessContract {
+  environment: string;
+  replica_safe: boolean;
+  rate_limiter_backend: string;
+  outbox_backend: string;
+  a2a_backend: string;
+  checkpointer_backend: string;
+  server_time: string;
+}
+
+export interface OpsVoiceConfig {
+  provider: string;
+  configured: boolean;
+  has_api_key: boolean;
+  configured_agents: string[];
+  voices: Record<string, string>;
+  server_time: string;
+}
+
 export interface OpsPaginatedResponse<T> {
   items: T[];
   page: OpsPageInfo;
@@ -297,6 +316,16 @@ export async function fetchOpsProviderCalls(params?: {
 /** GET /admin/ops/outbox — queue status */
 export async function fetchOpsOutbox(): Promise<OpsOutboxStatus> {
   return opsFetch<OpsOutboxStatus>('/admin/ops/outbox');
+}
+
+/** GET /admin/ops/readiness-contract — runtime backend contract */
+export async function fetchOpsReadinessContract(): Promise<OpsReadinessContract> {
+  return opsFetch<OpsReadinessContract>('/admin/ops/readiness-contract');
+}
+
+/** GET /admin/ops/voice/config — voice provider/runtime config */
+export async function fetchOpsVoiceConfig(): Promise<OpsVoiceConfig> {
+  return opsFetch<OpsVoiceConfig>('/admin/ops/voice/config');
 }
 
 /** GET /admin/ops/rollouts — paginated */

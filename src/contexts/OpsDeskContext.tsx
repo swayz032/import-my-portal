@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { fetchOpsVoiceConfig } from '@/services/opsFacadeClient';
 
 // Types
 export type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'acting' | 'error' | 'blocked' | 'searching_web' | 'searching_files' | 'querying_data' | 'connecting_agents' | 'drafting';
@@ -215,6 +216,27 @@ export function OpsDeskProvider({ children }: { children: ReactNode }) {
     isMuted: false,
     autoSpeak: true,
   });
+  const [isElevenLabsConfigured, setIsElevenLabsConfigured] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const hydrateVoiceConfig = async () => {
+      try {
+        const cfg = await fetchOpsVoiceConfig();
+        if (!cancelled) {
+          setIsElevenLabsConfigured(Boolean(cfg.configured));
+        }
+      } catch {
+        if (!cancelled) {
+          setIsElevenLabsConfigured(false);
+        }
+      }
+    };
+    hydrateVoiceConfig();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const addReceipt = useCallback((receipt: Omit<OpsDeskReceipt, 'id' | 'timestamp'>) => {
     setReceipts(prev => [...prev, { 
@@ -486,7 +508,7 @@ export function OpsDeskProvider({ children }: { children: ReactNode }) {
       isConversationActive, startConversation, endConversation, interruptSpeaking,
       isAnalyzing, isGeneratingPlan, isDraftingPatch, isCreatingApproval,
       currentPatchJob, voiceSettings, setVoiceSettings,
-      isElevenLabsConfigured: false, // Placeholder - would be true if ElevenLabs is configured
+      isElevenLabsConfigured,
       seedDemoData, clearAll,
     }}>
       {children}
