@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertCircle, Lock, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, Lock, CheckCircle2, UserPlus, LogIn } from 'lucide-react';
 import { z } from 'zod';
 
 // --- Rate Limiting Constants ---
@@ -18,7 +18,7 @@ const LOCKOUT_TIER1_MS = 60 * 1000;        // 60 seconds
 const LOCKOUT_TIER2_MS = 5 * 60 * 1000;    // 5 minutes
 const LOCKOUT_STORAGE_KEY = 'aspire_auth_lockout';
 
-// --- Sign-in Validation Schema ---
+// --- Validation Schemas ---
 const loginSchema = z.object({
   email: z
     .string()
@@ -28,7 +28,17 @@ const loginSchema = z.object({
   password: z.string().min(1, { message: 'Please enter your password' }),
 });
 
-// --- Lockout State Persistence (survives page refresh within browser) ---
+const signupSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+  inviteCode: z.string().min(1, { message: 'Invite code is required' }),
+});
+
+// --- Lockout State Persistence ---
 interface LockoutState {
   attempts: number;
   lockoutUntil: number | null;
@@ -39,7 +49,6 @@ function loadLockoutState(): LockoutState {
     const raw = sessionStorage.getItem(LOCKOUT_STORAGE_KEY);
     if (!raw) return { attempts: 0, lockoutUntil: null };
     const parsed = JSON.parse(raw) as LockoutState;
-    // If lockout has expired, reset
     if (parsed.lockoutUntil && Date.now() >= parsed.lockoutUntil) {
       return { attempts: parsed.attempts, lockoutUntil: null };
     }
@@ -53,7 +62,7 @@ function saveLockoutState(state: LockoutState): void {
   try {
     sessionStorage.setItem(LOCKOUT_STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // Storage might be full or disabled — fail silently, in-memory state still works
+    // fail silently
   }
 }
 
@@ -63,15 +72,15 @@ async function logAuthEvent(event: string, details: Record<string, unknown>): Pr
     await supabase.from('audit_log').insert({
       event,
       details,
-      user_id: null, // null for pre-auth events (failed/successful login attempts)
-      ip_address: null, // can't reliably get client IP from browser-side
+      user_id: null,
+      ip_address: null,
     });
   } catch {
-    // Never block the login flow if audit logging fails
+    // Never block auth flow
   }
 }
 
-// --- Forgot Password Handler ---
+// --- Forgot Password ---
 async function handleForgotPassword(email: string): Promise<{ success: boolean; message: string }> {
   if (!email || !z.string().email().safeParse(email).success) {
     return { success: false, message: 'Please enter a valid email address first.' };
@@ -81,10 +90,8 @@ async function handleForgotPassword(email: string): Promise<{ success: boolean; 
       redirectTo: `${window.location.origin}/auth`,
     });
     if (error) {
-      // Never reveal if the email exists — always show the same message
       devWarn('Password reset error:', error.message);
     }
-    // Always show the same success message regardless of whether email exists
     return {
       success: true,
       message: 'If an account with that email exists, a password reset link has been sent.',
@@ -100,11 +107,13 @@ async function handleForgotPassword(email: string): Promise<{ success: boolean; 
 export default function Auth() {
   const navigate = useNavigate();
   const { signIn } = useAuth();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
   // --- Rate Limiting State ---
@@ -114,56 +123,49 @@ export default function Auth() {
   );
   const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
 
-  // Persist lockout state to sessionStorage when it changes
   useEffect(() => {
     saveLockoutState({ attempts, lockoutUntil });
   }, [attempts, lockoutUntil]);
 
-  // Lockout countdown timer
   useEffect(() => {
     if (!lockoutUntil) {
       setLockoutRemaining(0);
       return;
     }
-
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
       setLockoutRemaining(remaining);
-      if (remaining <= 0) {
-        setLockoutUntil(null);
-      }
+      if (remaining <= 0) setLockoutUntil(null);
     };
-
-    tick(); // Immediately calculate on mount
+    tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [lockoutUntil]);
 
   const isLockedOut = lockoutUntil !== null && Date.now() < lockoutUntil;
 
+  // Clear errors when switching modes
+  const switchMode = (newMode: 'signin' | 'signup') => {
+    setMode(newMode);
+    setError(null);
+    setInfo(null);
+  };
+
+  // --- Sign In ---
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       setError(null);
       setInfo(null);
 
-      // --- Rate limit check (BEFORE any network call) ---
       if (isLockedOut) {
         setError(`Too many login attempts. Please try again in ${lockoutRemaining} seconds.`);
-        await logAuthEvent('login_blocked_ratelimit', {
-          email: email.trim().toLowerCase(),
-          attempts,
-          lockout_remaining_s: lockoutRemaining,
-        });
         return;
       }
 
-      // --- Input validation ---
       const sanitizedEmail = email.trim().toLowerCase();
       const result = loginSchema.safeParse({ email: sanitizedEmail, password });
       if (!result.success) {
-        // Show the first validation error, but NEVER reveal which field is wrong for
-        // a real attacker — validation errors are fine since the user is typing locally
         setError(result.error.errors[0].message);
         return;
       }
@@ -174,55 +176,104 @@ export default function Auth() {
         const { error: authError } = await signIn(sanitizedEmail, password);
 
         if (authError) {
-          // --- Failed login: increment attempts, apply lockout ---
           const newAttempts = attempts + 1;
           setAttempts(newAttempts);
-
-          // Always show a generic message — NEVER reveal if email exists
           setError('Invalid email or password.');
 
           await logAuthEvent('login_failed', {
             email: sanitizedEmail,
             attempt_number: newAttempts,
-            error_type: authError.message.includes('Invalid login credentials')
-              ? 'invalid_credentials'
-              : 'auth_error',
           });
 
           if (newAttempts >= MAX_ATTEMPTS_TIER2) {
-            const lockout = Date.now() + LOCKOUT_TIER2_MS;
-            setLockoutUntil(lockout);
-            setError(
-              `Too many failed attempts. Your account is locked for 5 minutes. If this wasn't you, reset your password immediately.`,
-            );
+            setLockoutUntil(Date.now() + LOCKOUT_TIER2_MS);
+            setError('Too many failed attempts. Your account is locked for 5 minutes.');
           } else if (newAttempts >= MAX_ATTEMPTS_TIER1) {
-            const lockout = Date.now() + LOCKOUT_TIER1_MS;
-            setLockoutUntil(lockout);
-            setError(
-              `Too many failed attempts. Please wait 60 seconds before trying again.`,
-            );
+            setLockoutUntil(Date.now() + LOCKOUT_TIER1_MS);
+            setError('Too many failed attempts. Please wait 60 seconds.');
           }
 
           setIsLoading(false);
           return;
         }
 
-        // --- Successful login: reset rate limiting ---
         setAttempts(0);
         setLockoutUntil(null);
         saveLockoutState({ attempts: 0, lockoutUntil: null });
-
-        await logAuthEvent('login_success', {
-          email: sanitizedEmail,
-        });
-
         navigate('/home');
-      } catch (err: unknown) {
+      } catch {
         setError('An unexpected error occurred. Please try again.');
         setIsLoading(false);
       }
     },
     [email, password, signIn, navigate, attempts, isLockedOut, lockoutRemaining],
+  );
+
+  // --- Sign Up ---
+  const handleSignup = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setInfo(null);
+
+      const sanitizedEmail = email.trim().toLowerCase();
+      const result = signupSchema.safeParse({
+        email: sanitizedEmail,
+        password,
+        inviteCode: inviteCode.trim(),
+      });
+      if (!result.success) {
+        setError(result.error.errors[0].message);
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('admin-signup', {
+          body: {
+            email: sanitizedEmail,
+            password,
+            invite_code: inviteCode.trim(),
+          },
+        });
+
+        if (fnError) {
+          setError(fnError.message || 'Signup failed. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (data?.error) {
+          setError(data.error);
+          setIsLoading(false);
+          return;
+        }
+
+        // If we got a session back, set it and navigate
+        if (data?.session?.access_token) {
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+
+          if (!setSessionError) {
+            await logAuthEvent('signup_success', { email: sanitizedEmail });
+            navigate('/home');
+            return;
+          }
+        }
+
+        // Fallback: show success and switch to sign-in
+        setInfo('Account created successfully! Please sign in.');
+        setMode('signin');
+        setIsLoading(false);
+      } catch {
+        setError('An unexpected error occurred. Please try again.');
+        setIsLoading(false);
+      }
+    },
+    [email, password, inviteCode, navigate],
   );
 
   const onForgotPassword = useCallback(async () => {
@@ -240,7 +291,6 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      {/* Subtle radial gradient background */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -251,14 +301,44 @@ export default function Auth() {
 
       <div className="relative w-full max-w-sm px-6">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
+        <div className="flex flex-col items-center mb-8">
           <div className="w-11 h-11 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-5">
             <span className="text-primary font-semibold text-lg tracking-tight">A</span>
           </div>
           <h1 className="text-xl font-semibold text-foreground tracking-tight">
             Aspire Admin
           </h1>
-          <p className="text-sm text-muted-foreground mt-1.5">Sign in to continue</p>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            {mode === 'signin' ? 'Sign in to continue' : 'Create your admin account'}
+          </p>
+        </div>
+
+        {/* Mode Toggle */}
+        <div className="flex mb-6 rounded-lg bg-secondary/30 p-1">
+          <button
+            type="button"
+            onClick={() => switchMode('signin')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-all ${
+              mode === 'signin'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('signup')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-all ${
+              mode === 'signup'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Sign Up
+          </button>
         </div>
 
         {/* Error Alert */}
@@ -269,7 +349,7 @@ export default function Auth() {
           </Alert>
         )}
 
-        {/* Info Alert (for forgot password success, etc.) */}
+        {/* Info Alert */}
         {info && (
           <Alert className="mb-5 border-primary/30 bg-primary/5">
             <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
@@ -278,7 +358,7 @@ export default function Auth() {
         )}
 
         {/* Lockout Countdown */}
-        {isLockedOut && (
+        {isLockedOut && mode === 'signin' && (
           <div className="mb-5 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-center">
             <p className="text-sm font-medium text-destructive">
               Account locked — {lockoutRemaining}s remaining
@@ -298,67 +378,142 @@ export default function Auth() {
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="email"
-              className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
-            >
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="admin@aspire.ai"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading || isLockedOut}
-              required
-              autoComplete="email"
-              className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="password"
-              className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
-            >
-              Password
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading || isLockedOut}
-              required
-              autoComplete="current-password"
-              className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
-            />
-          </div>
+        {/* Sign In Form */}
+        {mode === 'signin' && (
+          <>
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="email"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@aspire.ai"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading || isLockedOut}
+                  required
+                  autoComplete="email"
+                  className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="password"
+                  className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading || isLockedOut}
+                  required
+                  autoComplete="current-password"
+                  className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+                />
+              </div>
 
-          <Button
-            type="submit"
-            className="w-full h-10 font-medium"
-            disabled={isLoading || isLockedOut}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
-          </Button>
-        </form>
+              <Button
+                type="submit"
+                className="w-full h-10 font-medium"
+                disabled={isLoading || isLockedOut}
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+              </Button>
+            </form>
 
-        {/* Forgot Password */}
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            disabled={forgotPasswordLoading || isLockedOut}
-            className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {forgotPasswordLoading ? 'Sending...' : 'Forgot your password?'}
-          </button>
-        </div>
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                disabled={forgotPasswordLoading || isLockedOut}
+                className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {forgotPasswordLoading ? 'Sending...' : 'Forgot your password?'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Sign Up Form */}
+        {mode === 'signup' && (
+          <form onSubmit={handleSignup} className="space-y-5">
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="invite-code"
+                className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+              >
+                Invite Code
+              </Label>
+              <Input
+                id="invite-code"
+                type="text"
+                placeholder="Enter your invite code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                disabled={isLoading}
+                required
+                autoComplete="off"
+                className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="signup-email"
+                className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+              >
+                Email
+              </Label>
+              <Input
+                id="signup-email"
+                type="email"
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                required
+                autoComplete="email"
+                className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="signup-password"
+                className="text-xs font-medium text-muted-foreground uppercase tracking-wider"
+              >
+                Password
+              </Label>
+              <Input
+                id="signup-password"
+                type="password"
+                placeholder="Min 8 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                className="h-10 bg-secondary/50 border-border/50 focus:border-primary/40 transition-colors"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-10 font-medium"
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Account'}
+            </Button>
+          </form>
+        )}
 
         {/* Footer */}
         <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/60">
